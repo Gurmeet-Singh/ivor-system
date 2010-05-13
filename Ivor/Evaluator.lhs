@@ -63,7 +63,8 @@ Code			Stack	Env	Result
 (or leave alone for whnf)
 [[let x = t in e]]	xs	es	[[e]], xs, (Let x t: es)
 
-> type EvalState = (Maybe [(Name, Int)], Maybe [(Name, ([Int], Int))])
+> type EvalState = (Maybe [(Name, Int)], 
+>                   Maybe [(Name, ([Int], Int))])
 
 > evaluate :: Bool -> -- under binders? 'False' gives WHNF
 >             Gamma Name -> TT Name -> 

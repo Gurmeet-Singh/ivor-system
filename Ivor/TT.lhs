@@ -10,16 +10,13 @@
 > -- Public interface for theorem proving gadgets.
 
 > module Ivor.TT(-- * System state
->               emptyContext, Context,
->               Ivor.TT.check,fastCheck,
->               checkCtxt,converts,
+>               fastCheck,checkCtxt,converts,
 >               Ivor.TT.compile,
+>               module Ivor.CtxtTT,
 >               -- * Exported view of terms
->               module VTerm, IsTerm, IsData, 
->               -- * Errors
->               TTError(..), ttfail, getError, TTM,
+>               module VTerm, 
 >               -- * Definitions and Theorems
->               addDef,addTypedDef,addData,addDataNoElim,
+>               addDef,addTypedDef,
 >               addAxiom,declare,declareData,
 >               theorem,interactive,
 >               addPrimitive,addBinOp,addBinFn,addPrimFn,addExternalFn,
@@ -33,15 +30,14 @@
 >               proofterm, getGoals, getGoal, uniqueName, -- getActions
 >               allSolved,qed,
 >               -- * Examining the Context
->               eval, whnf, evalnew, evalnewWithout, evalnewLimit, evalCtxt, getDef, defined, getPatternDef,
+>               module Ivor.EvalTT,
+>               getDef, defined, getPatternDef,
 >               getAllTypes, getAllDefs, getAllPatternDefs, isAuxPattern, getConstructors,
 >               getInductive, getAllInductives, getType,
 >               Rule(..), getElimRule, nameType, getConstructorTag,
 >               getConstructorArity,
 >               Ivor.TT.freeze,Ivor.TT.thaw,
 >               -- * Goals, tactic types
->               Goal,goal,defaultGoal,
->               Tactic, --Tactics.TacticAction(..),
 >               GoalData, bindings, goalName, goalType,
 >               goalData, subGoals,
 >               -- * Primitive Tactics
@@ -99,7 +95,6 @@
 > import Ivor.Scopecheck
 > import Ivor.Gadgets
 > import Ivor.Nobby
-> import Ivor.Evaluator
 > import Ivor.SC
 > import Ivor.Bytecode
 > import Ivor.Datatype
@@ -112,6 +107,8 @@
 > import Ivor.PatternDefs
 > import Ivor.Errors
 > import Ivor.Values
+> import Ivor.EvalTT
+> import Ivor.CtxtTT
 
 > import Data.List
 > import Debug.Trace
@@ -119,57 +116,17 @@
 > import Control.Monad(when)
 > import Control.Monad.Error(Error,noMsg,strMsg)
 
-> -- | Abstract type representing state of the system.
-> newtype Context = Ctxt IState
-
-> -- | Abstract type representing goal or subgoal names.
-> data Goal = Goal Name | DefaultGoal
->     deriving Eq
-
-> instance Show Goal where
->     show (Goal g) = show g
->     show (DefaultGoal) = "Default Goal"
-
-> goal :: String -> Goal
-> goal g = Goal $ UN g
-
-> defaultGoal :: Goal
-> defaultGoal = DefaultGoal
-
-> -- |A tactic is any function which manipulates a term at the given goal
-> -- binding. Tactics may fail, hence the monad.
-> type Tactic = Goal -> Context -> TTM Context
-
-> -- | Initialise a context, with no data or definitions and an
-> -- empty proof state.
-> emptyContext :: Context
-> emptyContext = Ctxt initstate
-
-> class IsTerm a where
->     -- | Typecheck a term
->     check :: Context -> a -> TTM Term
->     raw :: a -> TTM Raw
-
-> class IsData a where
->     -- Add a data type with case and elim rules an elimination rule
->     addData :: Context -> a -> TTM Context
->     addData ctxt x = addData' True ctxt x
->     -- Add a data type without an elimination rule
->     addDataNoElim :: Context -> a -> TTM Context
->     addDataNoElim ctxt x = addData' False ctxt x
->     addData' :: Bool -> Context -> a -> TTM Context
-
 > instance IsTerm Term where
 >     check _ tm = return tm
 >     raw tm = return $ forget (view tm)
 
 > instance IsTerm ViewTerm where
->     check ctxt tm = Ivor.TT.check ctxt (forget tm)
+>     check ctxt tm = Ivor.CtxtTT.check ctxt (forget tm)
 >     raw tm = return $ forget tm
 
 > instance IsTerm String where
 >     check ctxt str = case parseTermString str of
->          (Success tm) -> Ivor.TT.check ctxt (forget tm)
+>          (Success tm) -> Ivor.CtxtTT.check ctxt (forget tm)
 >          (Failure err) -> fail err
 >     raw str = case parseTermString str of
 >          (Success tm) -> return $ forget tm
@@ -181,55 +138,6 @@
 >           (Right (t, ty)) -> return $ Term (t,ty)
 >           (Left err) -> tt $ ifail err
 >     raw t = return t
-
-> data TTError = CantUnify ViewTerm ViewTerm
->              | NotConvertible ViewTerm ViewTerm
->              | Message String
->              | Unbound ViewTerm ViewTerm ViewTerm ViewTerm [Name]
->              | NoSuchVar Name
->              | CantInfer Name ViewTerm
->              | ErrContext String TTError
->              | AmbiguousName [Name]
-
-> instance Show TTError where
->     show (CantUnify t1 t2) = "Can't unify " ++ show t1 ++ " and " ++ show t2
->     show (NotConvertible t1 t2) = show t1 ++ " and " ++ show t2 ++ " are not convertible"
->     show (Message s) = s
->     show (Unbound clause clty rhs rhsty ns) 
->        = show ns ++ " unbound in clause " ++ show clause ++ " : " ++ show clty ++ 
->                     " = " ++ show rhs
->     show (CantInfer  n tm) = "Can't infer value for " ++ show n ++ " in " ++ show tm
->     show (NoSuchVar n) = "No such name as " ++ show n
->     show (AmbiguousName ns) = "Ambiguous name " ++ show ns
->     show (ErrContext c err) = c ++ show err
-
-> instance Error TTError where
->     noMsg = Message "Ivor Error"
->     strMsg s = Message s
-
-> type TTM = Either TTError
-
-> ttfail :: String -> TTM a
-> ttfail s = Left (Message s)
-
-> tt :: IvorM a -> TTM a
-> tt (Left err) = Left (getError err)
-> tt (Right v) = Right v
-
-> getError :: IError -> TTError
-> getError (ICantUnify l r) = CantUnify (view (Term (l, Ind TTCore.Star))) (view (Term (r, Ind TTCore.Star)))
-> getError (INotConvertible l r) = NotConvertible (view (Term (l, Ind TTCore.Star))) (view (Term (r, Ind TTCore.Star)))
-> getError (IMessage s) = Message s
-> getError (IUnbound clause clty rhs rhsty names) 
->              = Unbound (view (Term (clause, Ind TTCore.Star)))
->                        (view (Term (clty, Ind TTCore.Star)))
->                        (view (Term (rhs, Ind TTCore.Star)))
->                        (view (Term (rhsty, Ind TTCore.Star)))
->                        names
-> getError (ICantInfer nm tm) = CantInfer nm (view (Term (tm, Ind TTCore.Star)))
-> getError (INoSuchVar n) = NoSuchVar n
-> getError (IAmbiguousName ns) = AmbiguousName ns
-> getError (IContext s e) = ErrContext s (getError e)
 
 > -- | Quickly convert a 'ViewTerm' into a real 'Term'.
 > -- This is dangerous; you must know that typechecking will succeed,
@@ -368,7 +276,7 @@
 >                Context -> Name -> term -> ty -> TTM Context
 > addTypedDef (Ctxt st) n tm ty = do
 >         checkNotExists n (defs st)
->         (Term (inty,_)) <- Ivor.TT.check (Ctxt st) ty
+>         (Term (inty,_)) <- Ivor.CtxtTT.check (Ctxt st) ty
 >         (Ctxt tmpctxt) <- declare (Ctxt st) n ty
 >         let tmp = defs tmpctxt
 >         let ctxt = defs st
@@ -488,7 +396,7 @@ do let olddefs = defs st
 > declareData :: (IsTerm a) => Context -> Name -> a -> TTM Context
 > declareData ctxt@(Ctxt st) n tm = do
 >   let gamma = defs st
->   Term (ty, _) <- Ivor.TT.check ctxt tm
+>   Term (ty, _) <- Ivor.CtxtTT.check ctxt tm
 >   addUn (TCon (arity gamma ty) NoConstructorsYet) ctxt n tm
 
 > -- | Add a new axiom to the global state.
@@ -527,7 +435,7 @@ do let olddefs = defs st
 >             Context -> Name -> (a->b->c) -> ty -> TTM Context
 > addBinOp (Ctxt st) n f tyin = do
 >        checkNotExists n (defs st)
->        Term (ty, _) <- Ivor.TT.check (Ctxt st) tyin
+>        Term (ty, _) <- Ivor.CtxtTT.check (Ctxt st) tyin
 >        let fndef = PrimOp mkfun mktt
 >        let Gam ctxt = defs st
 >        -- let newdefs = Gam ((n,(G fndef ty)):ctxt)
@@ -555,7 +463,7 @@ do let olddefs = defs st
 >             Context -> Name -> (a->b->ViewTerm) -> ty -> TTM Context
 > addBinFn (Ctxt st) n f tyin = do
 >        checkNotExists n (defs st)
->        Term (ty, _) <- Ivor.TT.check (Ctxt st) tyin
+>        Term (ty, _) <- Ivor.CtxtTT.check (Ctxt st) tyin
 >        let fndef = PrimOp mkfun mktt
 >        let Gam ctxt = defs st
 >        -- let newdefs = Gam ((n,(G fndef ty)):ctxt)
@@ -565,7 +473,7 @@ do let olddefs = defs st
 >          mkfun (Snoc (Snoc Empty (MR (RdConst x))) (MR (RdConst y)))
 >              = case cast x of
 >                   Just x' -> case cast y of
->                      Just y' -> case Ivor.TT.check (Ctxt st) $ f x' y' of
+>                      Just y' -> case Ivor.CtxtTT.check (Ctxt st) $ f x' y' of
 >                          Right (Term (Ind v,_)) ->
 >                              Just $ nf (emptyGam) (VG []) [] False v
 >                      Nothing -> Nothing
@@ -575,7 +483,7 @@ do let olddefs = defs st
 >          mktt [Const x, Const y]
 >              = case cast x of
 >                   Just x' -> case cast y of
->                      Just y' -> case Ivor.TT.check (Ctxt st) $ f x' y' of
+>                      Just y' -> case Ivor.CtxtTT.check (Ctxt st) $ f x' y' of
 >                          Right (Term (Ind v,_)) ->
 >                              Just v
 >                      Nothing -> Nothing
@@ -590,7 +498,7 @@ do let olddefs = defs st
 >             Context -> Name -> (a->ViewTerm) -> ty -> TTM Context
 > addPrimFn (Ctxt st) n f tyin = do
 >        checkNotExists n (defs st)
->        Term (ty, _) <- Ivor.TT.check (Ctxt st) tyin
+>        Term (ty, _) <- Ivor.CtxtTT.check (Ctxt st) tyin
 >        let fndef = PrimOp mkfun mktt
 >        let ctxt = defs st
 >        -- let newdefs = Gam ((n,(G fndef ty)):ctxt)
@@ -599,7 +507,7 @@ do let olddefs = defs st
 >    where mkfun :: Spine Value -> Maybe Value
 >          mkfun (Snoc Empty (MR (RdConst x)))
 >              = case cast x of
->                   Just x' -> case Ivor.TT.check (Ctxt st) $ f x' of
+>                   Just x' -> case Ivor.CtxtTT.check (Ctxt st) $ f x' of
 >                                  Right (Term (Ind v,_)) ->
 >                                      Just $ nf (emptyGam) (VG []) [] False v
 >                                  _ -> Nothing
@@ -608,7 +516,7 @@ do let olddefs = defs st
 >          mktt :: [TT Name] -> Maybe (TT Name)
 >          mktt [Const x]
 >               = case cast x of
->                   Just x' -> case Ivor.TT.check (Ctxt st) $ f x' of
+>                   Just x' -> case Ivor.CtxtTT.check (Ctxt st) $ f x' of
 >                                  Right (Term (Ind v,_)) ->
 >                                      Just v
 >                                  _ -> Nothing
@@ -624,7 +532,7 @@ do let olddefs = defs st
 >                  -> ty -> TTM Context
 > addExternalFn (Ctxt st) n arity f tyin = do
 >        checkNotExists n (defs st)
->        Term (ty, _) <- Ivor.TT.check (Ctxt st) tyin
+>        Term (ty, _) <- Ivor.CtxtTT.check (Ctxt st) tyin
 >        let fndef = PrimOp mkfun mktt
 >        let ctxt = defs st
 >        -- let newdefs = Gam ((n,(G fndef ty)):ctxt)
@@ -635,7 +543,7 @@ do let olddefs = defs st
 >            = if (length xs) /= arity then Nothing
 >               else case runf xs of
 >                      Just res ->
->                          case (Ivor.TT.check (Ctxt st) res) of
+>                          case (Ivor.CtxtTT.check (Ctxt st) res) of
 >                             Right (Term (Ind tm, _)) ->
 >                                 Just $ nf (emptyGam) (VG []) [] False tm
 >                             _ -> Nothing
@@ -645,7 +553,7 @@ do let olddefs = defs st
 >            = if (length xs) /= arity then Nothing
 >               else case f (map viewtt xs) of
 >                      Just res ->
->                          case (Ivor.TT.check (Ctxt st) res) of
+>                          case (Ivor.CtxtTT.check (Ctxt st) res) of
 >                             Right (Term (Ind tm, _)) ->
 >                                 Just tm
 >                             _ -> Nothing
@@ -782,34 +690,6 @@ Give a parseable but ugly representation of a term.
                            return $ Term (tm, ty)
          Failure err -> fail err
 
-> -- |Normalise a term and its type (using old evaluator_
-> eval :: Context -> Term -> Term
-> eval (Ctxt st) (Term (tm,ty)) = Term (normalise (defs st) tm,
->                                       normalise (defs st) ty)
-
-> -- |Reduce a term and its type to Weak Head Normal Form
-> whnf :: Context -> Term -> Term
-> whnf (Ctxt st) (Term (tm,ty)) = Term (eval_whnf (defs st) tm,
->                                          eval_whnf (defs st) ty)
-
-> -- |Reduce a term and its type to Normal Form (using new evaluator)
-> evalnew :: Context -> Term -> Term
-> evalnew (Ctxt st) (Term (tm,ty)) = Term (tidyNames (eval_nf (defs st) tm),
->                                          tidyNames (eval_nf (defs st) ty))
-
-> -- |Reduce a term and its type to Normal Form (using new evaluator, not
-> -- reducing given names)
-> evalnewWithout :: Context -> Term -> [Name] -> Term
-> evalnewWithout (Ctxt st) (Term (tm,ty)) ns 
->                    = Term (tidyNames (eval_nf_without (defs st) tm ns),
->                            tidyNames (eval_nf_without (defs st) ty ns))
-
-> -- |Reduce a term and its type to Normal Form (using new evaluator, reducing
-> -- given names a maximum number of times)
-> evalnewLimit :: Context -> Term -> [(Name, Int)] -> Term
-> evalnewLimit (Ctxt st) (Term (tm,ty)) ns 
->                  = Term (eval_nf_limit (defs st) tm ns Nothing,
->                          eval_nf_limit (defs st) ty ns Nothing)
 
 > -- |Check a term in the context of the given goal
 > checkCtxt :: (IsTerm a) => Context -> Goal -> a -> TTM Term
@@ -827,25 +707,6 @@ Give a parseable but ugly representation of a term.
 >          Nothing -> fail "No such goal"
 >  where holeenv :: Gamma Name -> Env Name -> Indexed Name -> Env Name
 >        holeenv gam hs _ = Tactics.ptovenv hs
-
-> -- |Evaluate a term in the context of the given goal
-> evalCtxt :: (IsTerm a) => Context -> Goal -> a -> TTM Term
-> evalCtxt (Ctxt st) goal tm =
->     do rawtm <- raw tm
->        prf <- case proofstate st of
->                 Nothing -> fail "No proof in progress"
->                 Just x -> return x
->        let h = case goal of
->                (Goal x) -> x
->                DefaultGoal -> head (holequeue st)
->        case (Tactics.findhole (defs st) (Just h) prf holeenv) of
->          (Just env) -> do (tm, ty) <- tt $ Ivor.Typecheck.check (defs st) env rawtm Nothing
->                           let tnorm = normaliseEnv env (defs st) tm
->                           return $ Term (tnorm, ty)
->          Nothing -> fail "No such goal"
->  where holeenv :: Gamma Name -> Env Name -> Indexed Name -> Env Name
->        holeenv gam hs _ = Tactics.ptovenv hs
-
 
 > -- |Check whether the conversion relation holds between two terms, in the
 > -- context of the given goal
