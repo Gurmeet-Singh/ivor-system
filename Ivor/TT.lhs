@@ -23,14 +23,14 @@
 >               addEquality,forgetDef,addGenRec,addImplicit,
 >               -- * Pattern matching definitions
 >               PClause(..), Patterns(..),PattOpt(..),addPatternDef,
->               toPattern,
+>               toPattern, spec,
 >               -- * Manipulating Proof State
 >               proving,numUnsolved,suspend,resume,
 >               save, restore, clearSaved,
 >               proofterm, getGoals, getGoal, uniqueName, -- getActions
 >               allSolved,qed,
 >               -- * Examining the Context
->               module Ivor.EvalTT,
+>               module Ivor.EvalTT, evalCtxt,
 >               getDef, defined, getPatternDef,
 >               getAllTypes, getAllDefs, getAllPatternDefs, isAuxPattern, getConstructors,
 >               getInductive, getAllInductives, getType,
@@ -237,6 +237,7 @@
 >         checkNotExists n (defs st)
 >         let ndefs = defs st
 >         inty <- raw ty
+>         let unused = defplicit
 >         let (Patterns clauses) = pats
 >         (pmdefs, newnames, tot) 
 >               <- tt $ checkDef ndefs n inty (map mkRawClause clauses)
@@ -251,15 +252,15 @@
 >                              let vnew = map (\ (n,t) -> 
 >                                              (n, view (Term (t,Ind TTCore.Star)))) newnames
 >                              let ngam = foldl (\g (n, t) ->
->                                                  extend g (n, G Unreducible t 0))
+>                                                  extend g (n, G Unreducible t unused))
 >                                               ndefs newnames
 >                              return (ngam, vnew)
->         newdefs <- insertAll pmdefs ndefs' tot
+>         newdefs <- insertAll pmdefs ndefs' tot unused
 >         return (Ctxt st { defs = newdefs }, vnewnames)
->   where insertAll [] gam tot = return gam
->         insertAll ((nm, def, ty):xs) gam tot = 
->             do gam' <- gInsert nm (G (PatternDef def tot (gen nm)) ty defplicit) gam
->                insertAll xs gam' tot
+>   where insertAll [] gam tot unused = return gam
+>         insertAll ((nm, def, ty):xs) gam tot unused = 
+>             do gam' <- gInsert nm (G (PatternDef def tot (gen nm)) ty unused) gam
+>                insertAll xs gam' tot unused
 >         gen nm = nm /= n -- generated if it's not the provided name.
 
 >         getSpec [] = Nothing
@@ -269,6 +270,23 @@
 >         getSpecSt [] = Nothing
 >         getSpecSt (SpecStatic fns:_) = Just fns
 >         getSpecSt (_:xs) = getSpecSt xs
+
+> -- |Specialise an existing pattern matching definition
+> spec :: Context -> Name
+>         -> [(Name, ([Int], Int))] -- ^ Functions and static arguments
+>         -> [Name] -- ^ Frozen names
+>         -> TTM Context
+> spec ctxt@(Ctxt st) fn statics frozen = trace ("Doing " ++ show fn) $
+
+Look up the name, specialise it, then add the new pattern definition to the
+context
+
+>     do (pats, tot, gen, ty, unused) <- getPatternDefCore ctxt fn
+>        let (ps', ctxt', names) = trace ("Specialising " ++ show (fn, pats)) $ specialise ctxt pats statics frozen
+>        let gam = defs st
+>        let gam' = remove fn gam
+>        gam' <- gInsert fn (G (PatternDef ps' tot gen) ty unused) gam'
+>        return $ Ctxt st { defs = gam' }
 
 > -- |Add a new definition, with its type to the global state.
 > -- These definitions can be recursive, so use with care.
@@ -732,6 +750,24 @@ Give a parseable but ugly representation of a term.
 >  where holeenv :: Gamma Name -> Env Name -> Indexed Name -> Env Name
 >        holeenv gam hs _ = Tactics.ptovenv hs
 
+> -- |Evaluate a term in the context of the given goal
+> evalCtxt :: (IsTerm a) => Context -> Goal -> a -> TTM Term
+> evalCtxt (Ctxt st) goal tm =
+>     do rawtm <- raw tm
+>        prf <- case proofstate st of
+>                 Nothing -> fail "No proof in progress"
+>                 Just x -> return x
+>        let h = case goal of
+>                (Goal x) -> x
+>                DefaultGoal -> head (holequeue st)
+>        case (Tactics.findhole (defs st) (Just h) prf holeenv) of
+>          (Just env) -> do (tm, ty) <- tt $ Ivor.Typecheck.check (defs st) env rawtm Nothing
+>                           let tnorm = normaliseEnv env (defs st) tm
+>                           return $ Term (tnorm, ty)
+>          Nothing -> fail "No such goal"
+>  where holeenv :: Gamma Name -> Env Name -> Indexed Name -> Env Name
+>        holeenv gam hs _ = Tactics.ptovenv hs
+
 > -- |Lookup a definition in the context.
 > getDef :: Context -> Name -> TTM Term
 > getDef (Ctxt st) n = case glookup n (defs st) of
@@ -791,6 +827,16 @@ Give a parseable but ugly representation of a term.
 >          viewPat (PCon t n ty ts) = VTerm.apply (Name DataCon (name (show n))) (map viewPat ts)
 >          viewPat (PConst c) = Constant c
 >          viewPat _ = Placeholder
+
+> getPatternDefCore :: Context -> Name -> 
+>                      TTM (PMFun Name, Bool, Bool, Indexed Name, Plicity)
+> getPatternDefCore (Ctxt st) n
+>     = case glookupall n (defs st) of
+>           Just ((PatternDef pmf t g),ty,plicit) -> 
+>               return (pmf, t, g, ty, plicit)
+>           Just ((Fun _ ind), ty, plicit) -> 
+>               return (PMFun 0 [Sch [] [] ind], True, False, ty, plicit)
+>           _ -> fail "Not a pattern matching definition"
 
 > -- |Get all the names and types in the context
 > getAllTypes :: Context -> [(Name,Term)]

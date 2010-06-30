@@ -464,14 +464,14 @@ Traverse a term looking for metavariables. Replace them with concrete
 names and return all the new names we need to define for it to be
 a complete definition.
 
-> updateMetas :: TT n -> (TT n, [(n, TT n)])
+> updateMetas :: Eq n => TT n -> (TT n, [(n, TT n)])
 > updateMetas tm = runState (ums tm) []
 >    where ums (App f a) = do f' <- ums f
 >                             a' <- ums a
 >                             return (App f' a')
 >          ums (Meta n ty) = do ty' <- ums ty
 >                               mvs <- get
->                               put ((n,ty'):mvs)
+>                               put $ nub ((n,ty'):mvs)
 >                               return (P n)
 >          ums (Bind n (B b ty) (Sc sc)) 
 >                  = do b' <- umsB b

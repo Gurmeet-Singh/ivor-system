@@ -50,10 +50,10 @@ to do with it, when the time comes.
 >     show Unreducible = "Unreducible"
 >     show Undefined = "Undefined"
 
-> type Plicity = Int
+> type Plicity = [Int] -- unused and implicit argument positions
 
-> defplicit :: Int
-> defplicit = 0
+> defplicit :: Plicity
+> defplicit = []
 
 > data Ord n => Gval n = G (Global n) (Indexed n) Plicity
 >    deriving Show
@@ -81,6 +81,10 @@ to do with it, when the time comes.
 
 > glookup ::  (Ord n, Eq n) => n -> Gamma n -> Maybe (Global n,Indexed n)
 > glookup n (Gam xs) = fmap (\x -> (getglob x,gettype x)) (Map.lookup n xs)
+
+> glookupall ::  (Ord n, Eq n) => n -> Gamma n -> 
+>                Maybe (Global n,Indexed n, Plicity)
+> glookupall n (Gam xs) = fmap (\x -> (getglob x,gettype x,getplicity x)) (Map.lookup n xs)
 
 Get a type name from the context
 
@@ -156,6 +160,12 @@ the name is replaced.
 >                                  return $ Gam (Map.insert nm val xs)
 >       Just _ -> fail $ "Name " ++ show nm ++ " is already defined"
 
+Replace a name in the context with a new pattern matching definitions
+
+> gReplace :: (Monad m, Ord n, Eq n, Show n) => 
+>             n -> Gval n -> Gamma n -> m (Gamma n)
+> gReplace nm val gam = do let gam' = remove nm gam
+>                          gInsert nm val gam'
 
 An ElimRule is a Haskell implementation of the iota reductions of
 a family.

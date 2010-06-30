@@ -18,7 +18,6 @@
 > import Ivor.State
 > import Ivor.Nobby
 > import Ivor.TTCore
-> import Ivor.Typecheck
 > import qualified Ivor.Tactics as Tactics
 
 > -- |Normalise a term and its type (using old evaluator_
@@ -50,21 +49,24 @@
 >                  = Term (eval_nf_limit (defs st) tm ns Nothing,
 >                          eval_nf_limit (defs st) ty ns Nothing)
 
-> -- |Evaluate a term in the context of the given goal
-> evalCtxt :: (IsTerm a) => Context -> Goal -> a -> TTM Term
-> evalCtxt (Ctxt st) goal tm =
->     do rawtm <- raw tm
->        prf <- case proofstate st of
->                 Nothing -> fail "No proof in progress"
->                 Just x -> return x
->        let h = case goal of
->                (Goal x) -> x
->                DefaultGoal -> head (holequeue st)
->        case (Tactics.findhole (defs st) (Just h) prf holeenv) of
->          (Just env) -> do (tm, ty) <- tt $ Ivor.Typecheck.check (defs st) env rawtm Nothing
->                           let tnorm = normaliseEnv env (defs st) tm
->                           return $ Term (tnorm, ty)
->          Nothing -> fail "No such goal"
->  where holeenv :: Gamma Name -> Env Name -> Indexed Name -> Env Name
->        holeenv gam hs _ = Tactics.ptovenv hs
+Specialise a pattern matching definition - support for 'spec'
+
+> specialise :: Context -> PMFun Name -> 
+>               [(Name, ([Int], Int))] -> -- functions with static args
+>               [Name] -> -- frozen names
+>               (PMFun Name, Context, [Name]) -- also, new names
+> specialise ctxt (PMFun ar ps) statics frozen = sp ctxt ps [] []
+>   where
+>    sp ctxt [] names acc = (PMFun ar (reverse acc), ctxt, names)
+>    sp ctxt@(Ctxt st) (p@(Sch args env ret):ps) names acc 
+>         = let ret' = eval_nf_limit (defs st) ret 
+>                          (map (\x -> (x,0)) frozen)
+>                          (Just statics) in
+>           sp ctxt ps names (Sch args env ret' : acc) 
+
+    sp ctxt (p@(PWithClause eq args scr pats):ps) names acc 
+         = let (pats', ctxt', names') = specialise ctxt pats statics frozen in
+               sp ctxt' ps names' (p:acc) 
+
+
 

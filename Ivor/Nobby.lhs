@@ -40,7 +40,7 @@ Do the actual evaluation
 
 >  eval stage gamma (VG g) (V n)
 >      | (length g) <= n = MB (BV n, MR RdInfer) Empty -- error $ "Reference out of context! " ++ show n ++ ", " ++ show (length g) --
->      | otherwise = g!!n
+>      | otherwise = traceIndex g n "Nobby fail"
 >  eval stage gamma g (P n)
 >      = case lookup n patvals of
 >           Just val -> val

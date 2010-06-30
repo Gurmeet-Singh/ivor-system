@@ -214,7 +214,7 @@ Each clause may generate auxiliary definitions, so return all definitions create
 >             do (tm@(Ind tmtt), pty,
 >                 rtm@(Ind rtmtt), rty, env, newdefs) <- checkAndBindPair gam clause ret
 >                unified <- unifyenv gam env pty rty
->                let gam' = foldl (\g (n,t) -> extend g (n,G Undefined t 0))
+>                let gam' = foldl (\g (n,t) -> extend g (n,G Undefined t defplicit))
 >                                   gam newdefs
 >                let rtmtt' = substNames unified rtmtt
 >                -- checkConvEnv env gam pty rty $ "Pattern error: " ++ show pty ++ " and " ++ show rty ++ " are not convertible " ++ show unify
@@ -222,10 +222,12 @@ Each clause may generate auxiliary definitions, so return all definitions create
 >                let namesbound = getNames (Sc tmtt)
 >                checkAllBound (fileLine ret) namesret namesbound (Ind rtmtt') tmtt rty pty
 >                -- trace (show env) $
->                let specrtm = case spec of
->                                Nothing -> Ind rtmtt'
+>                -- Actually, let's try specialising elsewhere
+
+>                let specrtm = Ind rtmtt' -- case spec of
+>                                {- Nothing -> Ind rtmtt'
 >                                Just [] -> eval_nf gam (Ind rtmtt')
->                                Just ns -> eval_nf_limit gam (Ind rtmtt') ns specst
+>                                Just ns -> eval_nf_limit gam (Ind rtmtt') ns specst -}
 >                return ((tm, specrtm, env), [], newdefs, True)
 >         mytypecheck gam (clause, (RWith addprf scr pats)) i =
 >             do -- Get the type of scrutinee, construct the type of the auxiliary definition
@@ -250,7 +252,7 @@ Each clause may generate auxiliary definitions, so return all definitions create
 >                              [scr] ++ if addprf then 
 >                                           [RApp (RApp (Var (UN "refl")) RInfer) RInfer]
 >                                          else [])
->                let gam' = insertGam newname (G Undefined newfnTy 0) gam
+>                let gam' = insertGam newname (G Undefined newfnTy defplicit) gam
 >                newpdef <- mapM (newp tm newargs 1 addprf) (zip newpats pats)
 >                (chk, auxdefs, _, _) <- mytypecheck gam' (clause, (RWRet ret)) i
 >                (auxdefs', newdefs, covers) <- checkDef gam' newname (forget newfnTy) newpdef False cover spec specst
