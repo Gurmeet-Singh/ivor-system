@@ -551,17 +551,18 @@ Insert inferred values into the term
 
 >  checkbinder gamma env lvl n (B Lambda t) = do
 >     (Ind tv,Ind tt) <- tcfixup env lvl t (Just (Ind Star))
->     let ttnf = normaliseEnv env gamma (Ind tt)
->     let (Ind tvnf) = normaliseEnv env gamma (Ind tv)
+>     let ttnf = eval_nf_env env gamma (Ind tt)
+>     let (Ind tvnf) = eval_nf_env env gamma (Ind tv)
 >     case ttnf of
 >       (Ind Star) -> return (B Lambda tvnf)
 >       (Ind (P (MN ("INFER",_)))) -> return (B Lambda tvnf)
 >       _ -> fail $ "The type of the binder " ++ show n ++ " must be *"
 >  checkbinder gamma env lvl n (B Pi t) = do
 >     (Ind tv,Ind tt) <- tcfixup env lvl t (Just (Ind Star))
->     let (Ind tvnf) = normaliseEnv env gamma (Ind tv)
->     -- let ttnf = normaliseEnv env gamma (Ind tt)
->     checkConvSt env gamma (Ind tt) (Ind Star)
+>     let (Ind tvnf) = eval_nf_env env gamma (Ind tv)
+>     let ttnf = -- trace ("PI: " ++ show (tv, tvnf, debugTT tv)) $ 
+>                eval_nf_env env gamma (Ind tt)
+>     checkConvSt env gamma ttnf (Ind Star)
 >     return (B Pi tvnf)
 
      case ttnf of

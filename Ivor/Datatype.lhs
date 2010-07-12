@@ -81,7 +81,7 @@ the context and an executable elimination rule.
 >                    (er,ev) (cr,cv) Nothing Nothing [] [])
 
 > checkCons gamma t [] = return ([], gamma)
-> checkCons gamma t ((cn,cty):cs) = 
+> checkCons gamma t ((cn,cty):cs) = -- trace ("Checking " ++ show (cn, cty)) $
 >              do (cv,_) <- typecheck gamma cty
 >		  let ccon = G (DCon t (arity gamma cv)) cv defplicit
 >		  let gamma' = extend gamma (cn,ccon)

@@ -276,7 +276,7 @@
 >         -> [(Name, ([Int], Int))] -- ^ Functions and static arguments
 >         -> [Name] -- ^ Frozen names
 >         -> TTM Context
-> spec ctxt@(Ctxt st) fn statics frozen = trace ("Doing " ++ show fn) $
+> spec ctxt@(Ctxt st) fn statics frozen = 
 
 Look up the name, specialise it, then add the new pattern definition to the
 context
@@ -318,9 +318,9 @@ context
 >         v <- raw tm
 >         let ctxt = defs st
 >         case (typecheck ctxt v) of
->             (Right (v,t@(Ind sc))) -> do
+>             (Right (v',t@(Ind sc))) -> do
 >                 checkBound (getNames (Sc sc)) t
->                 newdefs <- gInsert n (G (Fun [] v) t defplicit) ctxt
+>                 newdefs <- gInsert n (G (Fun [] v') t defplicit) ctxt
 >                 -- let newdefs = Gam ((n,G (Fun [] v) t):ctxt)
 >                 return $ Ctxt st { defs = newdefs }
 >             (Left err) -> tt $ ifail err
@@ -473,6 +473,7 @@ do let olddefs = defs st
 >                   Just x' -> case cast y of
 >                      Just y' -> Just $ Const (f x' y')
 >                      Nothing -> Nothing
+>                   Nothing -> Nothing
 >          mktt _ = Nothing
 
 > -- | Add a new binary function on constants. Warning: The type you give
