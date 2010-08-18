@@ -915,7 +915,7 @@ Some handy gadgets for Raw terms
 >        showV (ctx,i) | i < length ctx = P (UN ("{v}"++show i))
 >	               | otherwise = V i
 >        forgetTT (P x) = Var $ UN (show x)
->        forgetTT (V i) = RAnnot $ "v" ++ (show i)
+>        forgetTT (V i) = RAnnot $ "vFail{" ++ (show i) ++ "}"
 >        forgetTT (Con t x i) = Var $ UN (show x)
 >        forgetTT (TyCon x i) = Var $ UN (show x)
 >        forgetTT (Meta x i) = RMeta (UN (show x))

@@ -87,7 +87,12 @@ Code			Stack	Env	Result
 >   where
 >     eval :: (Bool, Bool) -> TT Name -> Stack -> SEnv -> 
 >             [(Name, TT Name)] -> State EvalState (TT Name)
->     eval nms tm stk env pats = {- trace (show (tm, stk, env, pats)) $ -} eval' nms tm stk env pats
+>     eval nms@(ev,top) tm stk env pats = -- trace (show (tm, stk, env, pats)) $
+>                             do eval' nms tm stk env pats
+>                                {- if (ev && top && null stk && tm'/=tm)
+>                                   then eval nms tm' [] env pats
+>                                   else return tm' -}
+>                                
 
 >     eval' (everything, top) (P x) xs env pats 
 >         = do (mns, sts) <- get
@@ -215,11 +220,13 @@ Code			Stack	Env	Result
 >              Nothing -> do put old
 >                            unload ev (P n) xs pats env
 >              Just (rhs, pbinds, stk) -> 
->                    let rhsin = case static of
->                                  Nothing -> rhs
->                                  Just foo -> {- trace (show (n, foo)) $ -} rhs 
->                        (pbinds', rhs') = renameRHS pbinds rhsin env xs in
->                        rhstrace (show n) rhs' pbinds'
+>                do rhsin <- case static of
+>                     Just (Just staticargs) -> 
+>                         do -- mkNewDef n staticargs xs
+>                            trace ("STATIC: " ++ show (n, staticargs, (map (\(x,y,z) -> x) xs))) $ return rhs 
+>                     _ -> return rhs
+>                   let (pbinds', rhs') = renameRHS pbinds rhsin env xs
+>                   rhstrace (show n) rhs' pbinds'
 >                           $ eval (ev, False) rhs' stk env pbinds'
 
 >     reqCons [] = repeat False
@@ -229,69 +236,77 @@ Code			Stack	Env	Result
 >     rc ((PConst _):ps) = True:(rc ps)
 >     rc (_:ps) = False:(rc ps)
 
+Careful with matching against catch all cases. If one clause *might* match,
+but doesn't because an argument is not in canonical form, then we're stuck,
+so better not look further!
+
 >     matches [] xs env pats = return Nothing
->     matches (c:cs) xs env pats 
->        = do cm <- (match c xs env pats)
+>     matches (c:cs) xs env pats
+>        = do cm <- match c xs env pats
 >             case cm of
->               Just v -> return $ Just v
->               Nothing -> matches cs xs env pats
+>               (Just v, _) -> return $ Just v
+>               (Nothing, False) -> matches cs xs env pats
+>               (Nothing, True) -> return Nothing -- Stuck due to variable
 
 >     match :: Scheme Name -> Stack -> SEnv -> 
 >              [(Name, TT Name)] ->
->              State EvalState (Maybe (TT Name, [(Name, TT Name)], Stack))
+>              State EvalState 
+>                    (Maybe (TT Name, [(Name, TT Name)], Stack), Bool)
 >     match (Sch pats _ rhs) xs env patvars 
 >               = matchargs pats xs rhs env patvars []
->     matchargs [] xs (Ind rhs) env patvars pv' = return $ Just (rhs, pv', xs)
+
+>     matchargs [] xs (Ind rhs) env patvars pv' 
+>                   = return $ (Just (rhs, pv', xs), False)
 >     matchargs (p:ps) ((x, xenv, xpats):xs) rhs env patvars pv'
 >       = do old <- get
 >            x' <- {- trace ("against " ++ show x) $ -} eval (False, True) x [] xenv xpats
->            xm <-  matchPat p x' xenv xpats pv' old
+>            (xm, stuck) <- matchPat p x' xenv xpats pv' old
 >            case xm of
 >              Just patvars' -> matchargs ps xs rhs env patvars patvars'
 >              Nothing -> do put old
->                            return Nothing
+>                            return (Nothing, stuck)
 
                 do xnms' <- eval True x [] xenv xpats
                    trace ("Fully evalled " ++ show (x,xnms')) $ case matchPat p x' pv' of
                      Just patvars' -> matchargs ps xs rhs env patvars patvars'
                      Nothing -> return Nothing
 
->     matchargs _ _ _ _ _ _ = return Nothing
+>     matchargs _ _ _ _ _ _ = return (Nothing, False)
 
->     matchPat PTerm x _ _ patvars old = return $ Just patvars
+>     matchPat PTerm x _ _ patvars old = return $ (Just patvars, False)
 >     matchPat (PVar n) x _ _ patvars old
->         = return $ Just ((n,x):patvars) -- (filter (\ (x,y) -> x/=n) patvars))
+>         = return $ (Just ((n,x):patvars), False) -- (filter (\ (x,y) -> x/=n) patvars))
 >     matchPat (PConst t) x xenv xpats patvars old
 >              = do x' <- eval (True, True) x [] [] []
 >                   case x' of
 >                     Const t' -> case cast t of
 >                                   Just tc -> 
->                                      if (tc == t') then return $ Just patvars
->                                                    else return Nothing
->                     _ -> return Nothing
+>                                      if (tc == t') then return $ (Just patvars, False)
+>                                                    else return (Nothing, False)
+>                     _ -> return (Nothing, False)
 >     matchPat pc@(PCon t _ _ args) x xenv xpats patvars old
 >              = do -- old <- get
 >                   x' <- eval (False, True) x [] xenv xpats
 >                   case getConArgs x' [] of
 >                     Just (tag, cargs) ->
 >                        if (tag == t) then matchPats args cargs patvars
->                                      else return Nothing
+>                                      else return (Nothing, False)
 >                     _ -> do put old
 >                             x' <- eval (True, True) x [] xenv xpats
 >                             case getConArgs x' [] of
 >                               Just (tag, cargs) ->
 >                                 if (tag == t) then matchPats args cargs patvars
->                                               else return Nothing
+>                                               else return (Nothing, False)
 
->                               _ -> return Nothing
->         where matchPats [] [] patvars = return $ Just patvars
+>                               _ -> return (Nothing, True)
+>         where matchPats [] [] patvars = return $ (Just patvars, False)
 >               matchPats (a:as) (b:bs) patvars
 >                   = do vs' <- matchPat a b xenv xpats patvars old
 >                        case vs' of
->                          Just pats -> matchPats as bs pats
->                          Nothing -> return Nothing
->               matchPats _ _ _ = return Nothing
->     matchPat _ _ _ _ _ _ = return Nothing
+>                          (Just pats, _) -> matchPats as bs pats
+>                          x -> return x
+>               matchPats _ _ _ = return (Nothing, False)
+>     matchPat _ _ _ _ _ _ = return (Nothing, False)
 
 >     getConArgs (Con t _ _) args = Just (t, args)
 >     getConArgs (App f a) args = getConArgs f (a:args)
