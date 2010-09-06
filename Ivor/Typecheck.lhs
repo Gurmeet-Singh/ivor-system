@@ -141,7 +141,7 @@ Handy to pass through all the variables, for tracing purposes when debugging.
 >                  let (Ind y') = eval_nf gam (Ind (papp s' y))
 >                  uns <- case unifyenvErr ok gam env (Ind y') (Ind x') of
 >                           Right uns -> return uns
->                           Left err -> {- trace (showeqn all) $ -} 
+>                           Left err -> -- trace (showeqn all) $
 >                                       ifail (errCtxt fc (ICantUnify (Ind y') (Ind x')))
 
                          Failure err -> fail $ err ++"\n" ++ show nms ++"\n" ++ show constraints -- $ -} ++ " Can't convert "++show x'++" and "++show y' ++ "\n" ++ show constraints ++ "\n" ++ show nms

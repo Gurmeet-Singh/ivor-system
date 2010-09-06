@@ -402,6 +402,7 @@
 >              case tag of
 >                0 -> liftM UN get
 >                1 -> liftM MN get
+>                n -> error $ "ViewTerm.lhs: Unknown Name tag " ++ show n
 
 > instance Binary NameType where
 >     put x = put (fromEnum x)

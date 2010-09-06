@@ -38,10 +38,9 @@ Unify on named terms, but normalise using de Bruijn indices.
 > -- Also, there is no point reducing if we don't have to, and not calling
 > -- the normaliser really speeds things up if we have a lot of easy
 > -- constraints to solve...
-> unifyenvErr i gam env x y = -- trace ("Unifying in " ++ show env) $ 
-> {- trace (show (x,y) ++ "\n" ++
+> unifyenvErr i gam env x y = {- trace ("Unifying " ++ (show (x,y) ++ "\n" ++
 >                                    show (p (normalise (gam' gam) x)) ++ "\n" ++
->                                    show (p (normalise (gam' gam) x))) $-}
+>                                    show (p (normalise (gam' gam) x)))) $ -}
 >     case unifynferr False env (p x)
 >                               (p y) of
 >           (Right x) -> return x

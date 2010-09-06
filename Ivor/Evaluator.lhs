@@ -253,18 +253,32 @@ so better not look further!
 >              State EvalState 
 >                    (Maybe (TT Name, [(Name, TT Name)], Stack), Bool)
 >     match (Sch pats _ rhs) xs env patvars 
->               = matchargs pats xs rhs env patvars []
+>               = do r <- matchargs pats xs rhs env patvars []
+>                    return r
 
 >     matchargs [] xs (Ind rhs) env patvars pv' 
 >                   = return $ (Just (rhs, pv', xs), False)
 >     matchargs (p:ps) ((x, xenv, xpats):xs) rhs env patvars pv'
 >       = do old <- get
 >            x' <- {- trace ("against " ++ show x) $ -} eval (False, True) x [] xenv xpats
->            (xm, stuck) <- matchPat p x' xenv xpats pv' old
+>            xm <- matchPat p x' xenv xpats pv' old
 >            case xm of
->              Just patvars' -> matchargs ps xs rhs env patvars patvars'
->              Nothing -> do put old
->                            return (Nothing, stuck)
+>              (Just patvars', _) -> matchargs ps xs rhs env patvars patvars'
+
+FIXME: We should only get stuck if we have a variable matching against
+a pattern (i.e. we've got a potential match) *and* all the rest of the
+arguments are matches or potential matches.
+
+If any of the remaining arguments definitely fail to match, we're not
+stuck.
+
+>              (Nothing, False) -> do put old
+>                                     return (Nothing, False)
+>              (Nothing, True) ->
+>                  do rest <- matchargs ps xs rhs env patvars pv'
+>                     case rest of
+>                       (Nothing, False) -> return (Nothing, False)
+>                       _ -> return (Nothing, True)
 
                 do xnms' <- eval True x [] xenv xpats
                    trace ("Fully evalled " ++ show (x,xnms')) $ case matchPat p x' pv' of
