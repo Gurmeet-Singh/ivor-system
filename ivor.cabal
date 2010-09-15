@@ -83,3 +83,4 @@ Other-modules:	Ivor.Nobby, Ivor.TTCore, Ivor.State,
 		Ivor.PatternDefs,  Ivor.ShellState, Ivor.Scopecheck,
 		Ivor.Overloading, 
                 Paths_ivor
+ghc-prof-options: -auto-all

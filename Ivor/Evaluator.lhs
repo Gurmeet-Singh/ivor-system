@@ -72,7 +72,8 @@ Code			Stack	Env	Result
 [[let x = t in e]]	xs	es	[[e]], xs, (Let x t: es)
 
 > type EvalState = (Maybe [(Name, Int)], 
->                   Maybe [(Name, ([Int], Int))])
+>                   Maybe [(Name, ([Int], Int))],
+>                   Int)
 
 > evaluate :: Bool -> -- under binders? 'False' gives WHNF
 >             Gamma Name -> TT Name -> 
@@ -81,7 +82,7 @@ Code			Stack	Env	Result
 >             Maybe [(Name, ([Int], Int))] -> -- Names and list of static args
 >             TT Name
 > evaluate open gam tm jns maxns statics = -- trace ("EVALUATING: " ++ debugTT tm) $ 
->                                  let res = evalState (eval (True, True) tm [] [] []) (maxns, statics)
+>                                  let res = evalState (eval (True, True) tm [] [] []) (maxns, statics, 0)
 >                                      in {- trace ("RESULT: " ++ debugTT res) -}
 >                                         res
 >   where
@@ -95,12 +96,12 @@ Code			Stack	Env	Result
 >                                
 
 >     eval' (everything, top) (P x) xs env pats 
->         = do (mns, sts) <- get
+>         = do (mns, sts, tmp) <- get
 >              let (use, mns', sts') = 
 >                      if (everything || top)
 >                         then usename x jns mns (sts, (xs, pats))
 >                         else (False, mns, sts)
->              put (mns', sts)
+>              put (mns', sts, tmp)
 >              -- when (not nms) (trace ("Not using " ++ show x) (return ()))
 >              case lookup x pats of
 >                 Nothing -> if use && (everything || top)
@@ -150,7 +151,9 @@ Code			Stack	Env	Result
 >                   eval nms sc xs ((n',ty,x'):env) pats
 >     evalScope nms@(ev,_) b n ty sc [] env pats
 >       | open = do let n' = uniqify' n (allNames [] env pats)
->                   let tmpname = uniqify' (MN ("E", length env)) (allNames [] env pats) -- (MN ("E", length env))
+>                   (mns, sts, tmp) <- get
+>                   let tmpname = MN ("E",tmp) -- uniqify' (MN ("E", length env)) (allNames [] env pats) -- (MN ("E", length env))
+>                   put (mns, sts, tmp+1)
 >                   sc' <- eval nms sc [] ((n',ty,P tmpname):env) pats
 >                   let newsc = pToV tmpname sc'
 >                   u' <- unload ev (Bind n' (B b ty) newsc) [] pats env
@@ -191,6 +194,9 @@ Code			Stack	Env	Result
 >                 = buildenv xs (subst tm (Sc t))
 >     --            = buildenv xs (Bind n (B (Let tm) ty) (Sc t))
 
+>     bindRHS [] rhs = rhs
+>     bindRHS ((x,t):xs) rhs = bindRHS xs $ substName x t (Sc rhs)
+
 >     renameRHS pbinds rhs env stk = rrhs [] [] (nub pbinds) rhs where
 >       rrhs namemap pbinds' [] rhs = {-trace ("BEFORE " ++ show (rhs, pbinds, pbinds')) $ -}
 >                                     (pbinds', substNames namemap rhs)
@@ -207,7 +213,7 @@ Code			Stack	Env	Result
 >     pmatch (False, False) n _ xs env pats 
 >            = unload False (P n) xs pats env
 >     pmatch (ev, top) n (PMFun i clauses) xs env pats = matchtrace (show n) xs $ 
->         do (mns, statics) <- get
+>         do (mns, statics, tmp) <- get
 >            let static = fmap (lookup n) statics
 >            let rcs = reqCons clauses
 >            {- xs' <- zipWithM (\(x, xenv, xpats) reqcon -> 
@@ -225,9 +231,9 @@ Code			Stack	Env	Result
 >                         do -- mkNewDef n staticargs xs
 >                            trace ("STATIC: " ++ show (n, staticargs, (map (\(x,y,z) -> x) xs))) $ return rhs 
 >                     _ -> return rhs
->                   let (pbinds', rhs') = renameRHS pbinds rhsin env xs
->                   rhstrace (show n) rhs' pbinds'
->                           $ eval (ev, False) rhs' stk env pbinds'
+>                   let rhs' = bindRHS pbinds rhsin 
+>                   rhstrace (show n) rhs' []
+>                           $ eval (ev, False) rhs' stk env []
 
 >     reqCons [] = repeat False
 >     reqCons ((Sch pats _ _):ss) = zipWith (||) (reqCons ss) (rc pats)
@@ -357,6 +363,7 @@ Various tracing facilities for spying on specific cases
 >        then trace ("Matching " ++ n ++ " " ++ show (map (\(x,y,z) -> x) xs))
 >        else id
 
+> rhstrace :: String -> TT Name -> [(Name, TT Name)] -> a -> a
 > rhstrace n rhs pbinds =
 >    if (n `elem` tracefns)
 >       then trace ("Returned " ++ n ++ " => " ++ show rhs ++ "\n" ++

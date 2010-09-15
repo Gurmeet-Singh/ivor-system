@@ -49,7 +49,7 @@ Also return whether the function is definitely total.
 >                   Nothing -> return False
 >                   _ -> return True -}
 >   let total = wf && covers
->   return (pmdefs, newdefs, total)
+>   return (mangleVars pmdefs, newdefs, total)
 >     where checkNotExists n gam = case lookupval n gam of
 >                                 Just Undefined -> return ()
 >                                 Just _ -> fail $ show n ++ " already defined"
@@ -482,3 +482,39 @@ anything or just variables)
      union (gpp 0 pats) (getPatPos numargs xs)
    where gpp pos [] = []
          gpp pos ((PCon _ _ _ _):xs) = pos:(gpp (pos+1) xs)
+
+Convert human names in pattern definitions to machine names (to avoid
+ambiguities when running)
+
+FIXME: This is really just an almighty hack until patterns are represented 
+better in terms.
+
+> mangleVars :: [(Name, PMFun Name, Indexed Name)] ->
+>               [(Name, PMFun Name, Indexed Name)]
+> mangleVars xs = map (\ (n, pm, ty) -> (n, manglePM pm, ty)) xs
+
+> manglePM :: PMFun Name -> PMFun Name
+> manglePM (PMFun a ps) = PMFun a (map mangleScheme ps)
+
+> mangleScheme :: Scheme Name -> Scheme Name
+> mangleScheme (Sch ps env (Ind rhs))
+>      = let (ps', vars) = collectVars ([], []) ps in
+>            Sch ps' env (Ind (renameRHS vars rhs))
+>    where renameRHS [] rhs = rhs
+>          renameRHS (x:xs) rhs 
+>             = renameRHS xs $ substName x (P (newN x)) (Sc rhs)
+
+>          newN x = PN x -- MN (x,42)
+>          -- newN (MN (x, i)) = MN (x, i+42)
+
+>          collectVars acc [] = acc
+>          collectVars (aps, avars) (p:ps) 
+>                          = let (p', vars) = collectPat p in
+>                                collectVars (aps++[p'], nub (avars++vars)) ps
+
+>          collectPat (PVar n) = (PVar (newN n), [n])
+>          collectPat (PCon a tag ty ps) =
+>              let (ps', vars') = collectVars ([],[]) ps in
+>                  (PCon a tag ty ps', vars')
+>          collectPat x = (x, [])
+                                                         

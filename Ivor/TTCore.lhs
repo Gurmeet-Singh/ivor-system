@@ -144,6 +144,7 @@ This keeps both namespaces separate.
 > data Name
 >     = UN String
 >     | MN (String,Int)
+>     | PN Name -- original name, pattern index
 >   deriving (Ord, Eq)
 
 > instance Typeable Name where
@@ -710,6 +711,7 @@ Eta equality:
 >     forget (MN ("INFER",i)) = "y"++show i
 >     forget (MN ("T",i)) = "z"++show i
 >     forget (MN (x,i)) = x ++ "[" ++ show i ++ "]"
+>     forget (PN x) = forget x
 
 > instance Forget Raw String where
 >     forget x = fPrec 10 x where
