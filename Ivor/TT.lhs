@@ -95,6 +95,7 @@
 > import Ivor.Scopecheck
 > import Ivor.Gadgets
 > import Ivor.Nobby
+> import Ivor.Evaluator
 > import Ivor.SC
 > import Ivor.Bytecode
 > import Ivor.Datatype
@@ -763,7 +764,7 @@ Give a parseable but ugly representation of a term.
 >                DefaultGoal -> head (holequeue st)
 >        case (Tactics.findhole (defs st) (Just h) prf holeenv) of
 >          (Just env) -> do (tm, ty) <- tt $ Ivor.Typecheck.check (defs st) env rawtm Nothing
->                           let tnorm = normaliseEnv env (defs st) tm
+>                           let tnorm = eval_nf_env env (defs st) tm
 >                           return $ Term (tnorm, ty)
 >          Nothing -> fail "No such goal"
 >  where holeenv :: Gamma Name -> Env Name -> Indexed Name -> Env Name
