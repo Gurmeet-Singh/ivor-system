@@ -46,6 +46,7 @@ representation of the names
 > data TT n
 >     = P n
 >     | V Int
+>     | L Int -- pattern variable
 >     | Con Int n Int -- Tag, name and arity
 >     | TyCon n Int  -- Name and arity
 >     | Meta n (TT n) -- Metavariable and its type
@@ -137,6 +138,41 @@ Pattern represents the patterns used to define iota schemes.
 > instance Eq n => Ord (Pattern n) where
 >     compare (PCon x _ _ _) (PCon y _ _ _) = compare x y
 >     compare _ _ = EQ -- Don't care!
+
+Simple case statements are either a case analysis, just a term. ErrorCase 
+and Impossible are distinct in that 'Impossible' should be the default 
+fallthrough when a function is known to be total, and ErrorCase otherwise.
+
+> data SimpleCase n = SCase (TT n) [CaseAlt n]
+>                   | Tm (TT n)
+>                   | ErrorCase
+>                   | Impossible
+>   deriving Eq
+
+> data CaseAlt n = Alt Int [n] (SimpleCase n)
+>                | forall c. Constant c => ConstAlt c (SimpleCase n)
+>                | Default (SimpleCase n)
+
+Only the kind of pattern it is matters. Just as well since constants are
+a pain...
+
+> instance Ord (CaseAlt n) where
+>   compare (Alt t _ _) (Alt u _ _) = compare t u
+>   compare (ConstAlt c _) (ConstAlt d _) = EQ
+>   compare (Default _) (Default _) = EQ
+>   compare (Alt _ _ _) _ = LT
+>   compare (ConstAlt _ _) (Alt _ _ _) = GT
+>   compare (ConstAlt _ _) (Default _) = LT
+>   compare (Default _) _ = GT
+
+> instance Eq (CaseAlt n) where
+>   (==) (Alt t _ _) (Alt u _ _) = t == u
+>   (==) (ConstAlt c _) (ConstAlt d _) = True
+>   (==) (Default _) (Default _) = True
+>   (==) (Alt _ _ _) _ = False
+>   (==) (ConstAlt _ _) (Alt _ _ _) = False
+>   (==) (ConstAlt _ _) (Default _) = False
+>   (==) (Default _) _ = False
 
 UN covers names defined by users, MN covers names invented by the system.
 This keeps both namespaces separate.
@@ -531,6 +567,20 @@ with de Bruijn indices or levels. We need a newtype Named n.
 > substName :: (Show n, Eq n) => n -> TT n -> Scope (TT n) -> TT n
 > substName p tm (Sc x) = p' x where
 >     p' (P x) | x == p = tm
+>     p' (App f' a) = (App (p' f') (p' a))
+>     p' (Bind n b (Sc sc)) = (Bind n (fmap p' b) (Sc (p' sc)))
+>      --   | n == p = (Bind n (fmap p' b) (Sc sc))
+>      --   | otherwise
+>     p' (Proj n i x) = Proj n i (p' x)
+>     p' (Label t (Comp n cs)) = Label (p' t) (Comp n (map p' cs))
+>     p' (Call (Comp n cs) t) = Call (Comp n (map p' cs)) (p' t)
+>     p' (Return t) = Return (p' t)
+>     p' (Stage t) = Stage (sLift p' t)
+>     p' x = x
+
+> substNames :: (Show n, Eq n) => [(n, TT n)] -> TT n -> TT n
+> substNames ptms x = p' x where
+>     p' (P x) | Just tm <- lookup x ptms = tm
 >     p' (App f' a) = (App (p' f') (p' a))
 >     p' (Bind n b (Sc sc)) = (Bind n (fmap p' b) (Sc (p' sc)))
 >      --   | n == p = (Bind n (fmap p' b) (Sc sc))

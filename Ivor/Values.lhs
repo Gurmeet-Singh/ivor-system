@@ -25,7 +25,8 @@ to do with it, when the time comes.
 > data Global n
 >     = Fun [FunOptions] (Indexed n)    -- User defined function
 >     | Partial (Indexed n) [n] -- Unfinished definition
->     | PatternDef (PMFun n) Bool Bool -- Pattern matching definition, totality, generated
+>       -- Pattern matching definition, totality, generated, compiled
+>     | PatternDef (PMFun n) Bool Bool ([n], SimpleCase n)
 >     | ElimRule ElimRule  -- Elimination Rule
 >     | PrimOp PrimOp EvPrim     -- Primitive function
 >     | DCon Int Int       -- Data Constructor, tag and arity

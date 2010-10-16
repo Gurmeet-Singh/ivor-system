@@ -186,9 +186,9 @@ Grr!
 >                   _ -> False
 
 
-> substNames :: [(Name,TT Name)] -> TT Name -> TT Name
-> substNames [] tm = tm
-> substNames ((n,t):xs) tm = substNames xs (substName n t (Sc tm))
+ substNames :: [(Name,TT Name)] -> TT Name -> TT Name
+ substNames [] tm = tm
+ substNames ((n,t):xs) tm = substNames xs (substName n t (Sc tm))
 
 Look for a specific term (unifying with a subterm)
 and replace it.

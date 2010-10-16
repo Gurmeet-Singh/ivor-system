@@ -96,20 +96,17 @@
 > import Ivor.Gadgets
 > import Ivor.Nobby
 > import Ivor.Evaluator
-> import Ivor.SC
-> import Ivor.Bytecode
 > import Ivor.Datatype
 > import Ivor.Constant
 > import Ivor.ViewTerm as VTerm
 > import Ivor.TermParser
 > import qualified Ivor.Tactics as Tactics
-> import Ivor.Compiler as Compiler
-> import Ivor.CodegenC
 > import Ivor.PatternDefs
 > import Ivor.Errors
 > import Ivor.Values
 > import Ivor.EvalTT
 > import Ivor.CtxtTT
+> import Ivor.PMComp
 
 > import Data.List
 > import Debug.Trace
@@ -217,6 +214,8 @@
 >            _ -> False
 >            
 
+ patternDef gam n ty pmf t g = PatternDef pmf t g (pmcomp gam n ty pmf)
+
 > data PattOpt = Partial -- ^ No need to cover all cases
 >              | GenRec -- ^ No termination checking
 >              | Holey -- ^ Allow metavariables in the definition, which will become theorems which need to be proved.
@@ -260,7 +259,7 @@
 >         return (Ctxt st { defs = newdefs }, vnewnames)
 >   where insertAll [] gam tot unused = return gam
 >         insertAll ((nm, def, ty):xs) gam tot unused = 
->             do gam' <- gInsert nm (G (PatternDef def tot (gen nm)) ty unused) gam
+>             do gam' <- gInsert nm (G (patternDef gam nm ty def tot (gen nm)) ty unused) gam
 >                insertAll xs gam' tot unused
 >         gen nm = nm /= n -- generated if it's not the provided name.
 
@@ -286,7 +285,7 @@ context
 >        let (ps', ctxt', names) = trace ("Specialising " ++ show (fn, pats)) $ specialise ctxt pats statics frozen
 >        let gam = defs st
 >        let gam' = remove fn gam
->        gam' <- gInsert fn (G (PatternDef ps' tot gen) ty unused) gam'
+>        gam' <- gInsert fn (G (patternDef gam' fn ty ps' tot gen) ty unused) gam'
 >        return $ Ctxt st { defs = gam' }
 
 > -- |Add a new definition, with its type to the global state.
@@ -359,7 +358,6 @@ do let olddefs = defs st
 >              (Right (v,t)) -> do
 >                 -- let newdefs = Gam ((n,G (Fun [] v) t):ctxt)
 >                 newdefs <- gInsert n (G (Fun [] v) t defplicit) ctxt
->                 let scs = lift n (levelise (normalise (emptyGam) v))
 >                 return $ Ctxt st { defs = newdefs }
 >              (Left err) -> ttfail $ "Can't happen (general): "++ show err
 
@@ -811,7 +809,7 @@ Give a parseable but ugly representation of a term.
 > getPatternDef :: Context -> Name -> TTM (ViewTerm, Patterns)
 > getPatternDef (Ctxt st) n
 >     = case glookup n (defs st) of
->           Just ((PatternDef pmf _ _),ty) ->
+>           Just ((PatternDef pmf _ _ _),ty) ->
 >               return $ (view (Term (ty, Ind TTCore.Star)), 
 >                         Patterns (map mkPat (getPats pmf)))
 >           Just ((Fun _ ind), ty) ->
@@ -834,7 +832,7 @@ Give a parseable but ugly representation of a term.
 >                      TTM (PMFun Name, Bool, Bool, Indexed Name, Plicity)
 > getPatternDefCore (Ctxt st) n
 >     = case glookupall n (defs st) of
->           Just ((PatternDef pmf t g),ty,plicit) -> 
+>           Just ((PatternDef pmf t g _),ty,plicit) -> 
 >               return (pmf, t, g, ty, plicit)
 >           Just ((Fun _ ind), ty, plicit) -> 
 >               return (PMFun 0 [Sch [] [] ind], True, False, ty, plicit)
@@ -860,7 +858,7 @@ Give a parseable but ugly representation of a term.
 > -- clause?
 > isAuxPattern :: Context -> Name -> Bool
 > isAuxPattern (Ctxt st) n = case glookup n (defs st) of
->           Just ((PatternDef pmf _ gen),ty) -> gen
+>           Just ((PatternDef pmf _ gen _),ty) -> gen
 >           _ -> False
 
 

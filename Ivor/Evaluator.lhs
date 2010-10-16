@@ -137,7 +137,7 @@ Code			Stack	Env	Result
 >     evalP (ev, top) n (Just v) xs env pats 
 >        = case v of
 >             Fun opts (Ind v) -> eval (ev, False) v xs env pats
->             PatternDef p _ _ -> pmatch (ev, top) n p xs env pats
+>             PatternDef p _ _ _ -> pmatch (ev, top) n p xs env pats
 >             PrimOp _ f -> do xs' <- mapM (\(x, xenv, xpats) -> eval (ev, False) x [] xenv xpats) xs
 >                              case f xs' of
 >                                Nothing -> unload ev (P n) xs pats env
@@ -207,8 +207,8 @@ Code			Stack	Env	Result
 >                                             concat (map (map fst) (map stkpats stk))) in
 >                rrhs ((n,P n'):namemap) ((n',t):pbinds) ns rhs
 
->     substNames [] rhs = {-trace ("AFTER " ++ show rhs) $ -} rhs
->     substNames ((n,t):ns) rhs = substNames ns (substName n t (Sc rhs))
+     substNames [] rhs = {-trace ("AFTER " ++ show rhs) $ -} rhs
+     substNames ((n,t):ns) rhs = substNames ns (substName n t (Sc rhs))
 
 >     pmatch (False, False) n _ xs env pats 
 >            = unload False (P n) xs pats env

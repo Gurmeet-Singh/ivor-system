@@ -8,16 +8,12 @@
 > import Ivor.Typecheck
 > import Ivor.Datatype
 > import Ivor.MakeData
-> import Ivor.ICompile
-> import Ivor.Grouper
-> import Ivor.SC
-> import Ivor.Bytecode
-> import Ivor.CodegenC
 > import Ivor.Tactics as Tactics
 > import Ivor.Display
 > import Ivor.Unify
 > import Ivor.Errors
 > import Ivor.Values
+> import Ivor.PMComp
 
 > import System.Environment
 > import Data.List
@@ -107,10 +103,15 @@ Take a data type definition and add constructors and elim rule to the context.
 >              ctxt <- addCons xs ctxt
 >              gInsert n gl ctxt
 >          addElim ctxt erule schemes = do
->            newdefs <- gInsert (fst erule)
->                               (G (PatternDef schemes True False) (snd erule) defplicit)
+>            let rnm = fst erule
+>            let rty = snd erule
+>            newdefs <- gInsert rnm
+>                               (G (patternDef ctxt rnm rty schemes True False) rty defplicit)
 >                               ctxt
 >            return newdefs
+
+> patternDef gam n (Ind ty) pmf t g = PatternDef pmf t g (pmcomp gam n ty pmf)
+
 
 > doMkData :: Bool -> IState -> Datadecl -> IvorM IState
 > doMkData elim st (Datadecl n ps rawty cs) 
