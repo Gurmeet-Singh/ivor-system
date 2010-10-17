@@ -105,7 +105,7 @@ Pattern represents the patterns used to define iota schemes.
 
 > data Pattern n =
 >	 PVar n  -- Variable
->      | PCon Int n n [Pattern n] -- Constructor, with tag and type
+>      | PCon Int n n [Pattern n] -- Constructor, with tag, name and type
 >      | forall c.(Constant c) => PConst !c
 >      | PMarkCon n [Pattern n] -- Detagged constructor
 >      | PTerm -- Presupposed term (don't care what it is)
@@ -143,36 +143,36 @@ Simple case statements are either a case analysis, just a term. ErrorCase
 and Impossible are distinct in that 'Impossible' should be the default 
 fallthrough when a function is known to be total, and ErrorCase otherwise.
 
-> data SimpleCase n = SCase (TT n) [CaseAlt n]
->                   | Tm (TT n)
->                   | ErrorCase
->                   | Impossible
+> data TSimpleCase n = TSCase (TT n) [TCaseAlt n]
+>                    | TTm (TT n)
+>                    | TErrorCase
+>                    | TImpossible
 >   deriving Eq
 
-> data CaseAlt n = Alt Int [n] (SimpleCase n)
->                | forall c. Constant c => ConstAlt c (SimpleCase n)
->                | Default (SimpleCase n)
+> data TCaseAlt n = TAlt n Int [n] (TSimpleCase n)
+>                 | forall c. Constant c => TConstAlt c (TSimpleCase n)
+>                 | TDefault (TSimpleCase n)
 
 Only the kind of pattern it is matters. Just as well since constants are
 a pain...
 
-> instance Ord (CaseAlt n) where
->   compare (Alt t _ _) (Alt u _ _) = compare t u
->   compare (ConstAlt c _) (ConstAlt d _) = EQ
->   compare (Default _) (Default _) = EQ
->   compare (Alt _ _ _) _ = LT
->   compare (ConstAlt _ _) (Alt _ _ _) = GT
->   compare (ConstAlt _ _) (Default _) = LT
->   compare (Default _) _ = GT
+> instance Ord (TCaseAlt n) where
+>   compare (TAlt _ t _ _) (TAlt _ u _ _) = compare t u
+>   compare (TConstAlt c _) (TConstAlt d _) = EQ
+>   compare (TDefault _) (TDefault _) = EQ
+>   compare (TAlt _ _ _ _) _ = LT
+>   compare (TConstAlt _ _) (TAlt _ _ _ _) = GT
+>   compare (TConstAlt _ _) (TDefault _) = LT
+>   compare (TDefault _) _ = GT
 
-> instance Eq (CaseAlt n) where
->   (==) (Alt t _ _) (Alt u _ _) = t == u
->   (==) (ConstAlt c _) (ConstAlt d _) = True
->   (==) (Default _) (Default _) = True
->   (==) (Alt _ _ _) _ = False
->   (==) (ConstAlt _ _) (Alt _ _ _) = False
->   (==) (ConstAlt _ _) (Default _) = False
->   (==) (Default _) _ = False
+> instance Eq (TCaseAlt n) where
+>   (==) (TAlt _ t _ _) (TAlt _ u _ _) = t == u
+>   (==) (TConstAlt c _) (TConstAlt d _) = True
+>   (==) (TDefault _) (TDefault _) = True
+>   (==) (TAlt _ _ _ _) _ = False
+>   (==) (TConstAlt _ _) (TAlt _ _ _ _) = False
+>   (==) (TConstAlt _ _) (TDefault _) = False
+>   (==) (TDefault _) _ = False
 
 UN covers names defined by users, MN covers names invented by the system.
 This keeps both namespaces separate.

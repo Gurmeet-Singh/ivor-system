@@ -31,7 +31,7 @@
 >               allSolved,qed,
 >               -- * Examining the Context
 >               module Ivor.EvalTT, evalCtxt,
->               getDef, defined, getPatternDef,
+>               getDef, defined, getPatternDef, getCompiledPatternDef,
 >               getAllTypes, getAllDefs, getAllPatternDefs, isAuxPattern, getConstructors,
 >               getInductive, getAllInductives, getType,
 >               Rule(..), getElimRule, nameType, getConstructorTag,
@@ -837,6 +837,28 @@ Give a parseable but ugly representation of a term.
 >           Just ((Fun _ ind), ty, plicit) -> 
 >               return (PMFun 0 [Sch [] [] ind], True, False, ty, plicit)
 >           _ -> fail "Not a pattern matching definition"
+
+> -- |Lookup a pattern matching definition in the context. Return the
+> -- argument names and compiled simple case tree.
+> getCompiledPatternDef :: Context -> Name -> TTM ([Name], SimpleCase)
+> getCompiledPatternDef (Ctxt st) n
+>     = case glookup n (defs st) of
+>           Just ((PatternDef pmf _ _ (ns, sc)),ty) ->
+>                  Right (ns, mkSC sc)
+>           Just ((Fun _ (Ind ind)), ty) ->
+>               return ([], mkSC (TTm ind))
+>           _ -> fail "Not a pattern matching definition"
+>   where mkSC :: TSimpleCase Name -> SimpleCase
+>         mkSC (TTm t) = Tm (mkSCtm t)
+>         mkSC TErrorCase = ErrorCase
+>         mkSC TImpossible = Impossible
+>         mkSC (TSCase tm alts) = SCase (mkSCtm tm) (map mkAlt alts)
+>         mkAlt (TAlt n t args sc) = Alt n t args (mkSC sc)
+>         mkAlt (TConstAlt c sc) = ConstAlt c (mkSC sc)
+>         mkAlt (TDefault sc) = Default (mkSC sc)
+
+>         mkSCtm t = view (Term (Ind t, dontcare))
+>         dontcare = Ind (TTCore.Star)
 
 > -- |Get all the names and types in the context
 > getAllTypes :: Context -> [(Name,Term)]

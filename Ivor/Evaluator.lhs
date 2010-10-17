@@ -137,7 +137,10 @@ Code			Stack	Env	Result
 >     evalP (ev, top) n (Just v) xs env pats 
 >        = case v of
 >             Fun opts (Ind v) -> eval (ev, False) v xs env pats
->             PatternDef p _ _ _ -> pmatch (ev, top) n p xs env pats
+>             PatternDef p@(PMFun arity _) _ _ pc -> 
+>                 do ans <- pmatchC (ev, top) n pc xs env pats
+>                    -- ans <- pmatch (ev, top) n p xs env pats
+>                    return ans
 >             PrimOp _ f -> do xs' <- mapM (\(x, xenv, xpats) -> eval (ev, False) x [] xenv xpats) xs
 >                              case f xs' of
 >                                Nothing -> unload ev (P n) xs pats env
@@ -170,6 +173,12 @@ Code			Stack	Env	Result
 >
 >     uniqify' u@(UN n) ns = uniqify (MN (n,0)) ns
 >     uniqify' n ns = uniqify n ns
+
+>     evalStk ev ((a, aenv, apats):as) 
+>         = do a' <- eval (ev, False) a [] aenv apats
+>              as' <- evalStk ev as
+>              return (a':as')
+>     evalStk ev [] = return []
 
      usename x _ mns (sts, (stk, pats)) 
           | Just (static, arity) <- lookup x sts 
@@ -333,6 +342,65 @@ stuck.
 >     getConArgs _ _ = Nothing
 
 
+Substitution using compiled matches
+
+>     pmatchC top n (args, pc) xs env pats
+>         | length xs >= length args
+>             = -- trace (show (n, map (\ (x,_,_) -> x) (take arity xs))) $
+>               do let stk = take (length args) xs
+>                  let rest = drop (length args) xs
+>                  argvals' <- evalStk True stk
+>                  old <- get
+>                  m <- pmSubst n env (zip args argvals') pc
+>                  case m of
+>                    Just t -> eval top t rest env pats
+>                    Nothing -> do put old
+>                                  unload True (P n) xs pats env
+>         | otherwise = unload True (P n) xs pats env
+
+>     pmSubst :: Name -> SEnv -> -- Name useful for debugging
+>                [(Name, TT Name)] -> -- function arguments, value
+>                TSimpleCase Name -> -- compiled match
+>                State EvalState (Maybe (TT Name))
+>     pmSubst n env args (TTm rhs) 
+>         = let rhs' = substNames args rhs in
+>             return $ Just rhs'
+>     pmSubst n env args TErrorCase = return $ Nothing
+>     pmSubst n env args TImpossible = return $ Nothing
+>     pmSubst n env args (TSCase scr cases)
+>         = case scr of
+>             P n -> case lookup n args of
+>                        Just e' -> pmSubstCases e' cases
+>             e -> do e' <- eval (True, True) (substNames args e) [] env []
+>                     pmSubstCases e' cases
+>       where pmSubstCases e [] = return Nothing
+>             pmSubstCases e (c:cs) = do t <- pmCase e c
+>                                        case t of
+>                                          (Just t', _) -> return (Just t')
+>                                          (Nothing, False) -> pmSubstCases e cs
+>                                          _ -> return Nothing
+
+Matching will either succeed, fail (but not be stuck), or realise it's stuck
+
+>             pmCase e (TDefault rhs) = do v <- pmSubst n env args rhs
+>                                          return (v, False)
+>             pmCase e (TAlt con t cargs sc)
+>              | Just (t', cargs') <- getConArgs e []
+>                 = if (t==t' && length cargs == length cargs')
+>                      then do v <- pmSubst n env (args ++ zip cargs cargs') sc
+>                              return (v, False)
+>                      else return (Nothing, False)
+>              | otherwise = return (Nothing, True)
+>             pmCase (Const e) (TConstAlt c sc)
+>                    = case cast e of
+>                        Just e' -> if (e'==c) 
+>                           then do v <- pmSubst n env args sc
+>                                   return (v, False)
+>                           else return (Nothing, False)
+>                        Nothing -> return (Nothing, False)
+>             pmCase _ _ = return (Nothing, True)
+
+> traceIf t s x = if t then (trace s x) else x
 
 > eval_nfEnv :: Env Name -> Gamma Name -> Indexed Name -> Indexed Name
 > eval_nfEnv env g t

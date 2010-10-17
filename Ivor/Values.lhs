@@ -26,7 +26,7 @@ to do with it, when the time comes.
 >     = Fun [FunOptions] (Indexed n)    -- User defined function
 >     | Partial (Indexed n) [n] -- Unfinished definition
 >       -- Pattern matching definition, totality, generated, compiled
->     | PatternDef (PMFun n) Bool Bool ([n], SimpleCase n)
+>     | PatternDef (PMFun n) Bool Bool ([n], TSimpleCase n)
 >     | ElimRule ElimRule  -- Elimination Rule
 >     | PrimOp PrimOp EvPrim     -- Primitive function
 >     | DCon Int Int       -- Data Constructor, tag and arity

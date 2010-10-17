@@ -23,7 +23,9 @@
 >                        getArgTypes, Ivor.ViewTerm.getReturnType,
 >                        dbgshow,
 >                        -- * Inductive types
->                        Inductive(..)) 
+>                        Inductive(..),
+>                        -- * Compile pattern matches
+>                        SimpleCase(..), CaseAlt(..)) 
 >    where
 
 > import Ivor.TTCore as TTCore hiding (subst)
@@ -86,7 +88,20 @@
 
 > data Annot = FileLoc FilePath Int -- ^ source file, line number
 
+> data SimpleCase = SCase ViewTerm [CaseAlt]
+>                 | Tm ViewTerm
+>                 | ErrorCase
+>                 | Impossible
+>   deriving Show
 
+> data CaseAlt = Alt Name Int [Name] SimpleCase
+>              | forall c. Constant c => ConstAlt c SimpleCase
+>              | Default SimpleCase
+
+> instance Show CaseAlt where
+>     show (Alt n i args sc) = "Alt " ++ show (n,i) ++ " " ++ 
+>                              show args ++ " => " ++ show sc
+>     show (Default sc) = "Default => " ++ show sc
 
 > instance Eq ViewTerm where
 >     (==) (Name _ x) (Name _ y) = x == y

@@ -18,43 +18,14 @@ this. Let's just make it work first...)
 
 > pmcomp :: Gamma Name -> 
 >           Name -> TT Name -> PMFun Name -> 
->           ([Name], SimpleCase Name)
+>           ([Name], TSimpleCase Name)
 > pmcomp ctxt n ty (PMFun arity ps)
 >       = pm' n (map mkPat ps)
 >    where mkPat (Sch args _ (Ind rv))
 >            = Clause args rv
 >          pm' n ps = evalState (doCaseComp ctxt ps) (CS 0)
 
-It's easier if we can distinguish syntactically between constructor forms
-and variables (and constants)
-
-> data Pat = PatCon Name Int [Pat]
->          | PatVar Name
->          | forall c. Constant c => PatConst c
->          | PatAny
-
 > data Clause = Clause [Pattern Name] (TT Name)
-
-FIXME: If an argument is repeated in the patterns, turn the later ones
-into underscores (since type checking will verify they are the same,
-and if we don't matching can get confused).
-
-> toPat :: Gamma Name -> TT Name -> Pat
-> toPat ctxt tm = toPat' tm [] where
->     toPat' (P n) []
->         | isVar n = PatVar n
->         | otherwise = PatAny
->     toPat' (Con i n ar) args 
->         = PatCon n i args
->     toPat' (App f a) args = toPat' f ((toPat' a []):args)
->     toPat' (Const c) [] = PatConst c
->     toPat' _ _ = PatAny
-
->     isVar n = case glookup n ctxt of
->                 Nothing -> True
->                 Just (DCon _ _, _) -> False
->                 Just (TCon _ _, _) -> False
->                 Just _ -> True
 
 > isVarPat (Clause ((PVar _):ps) _) = True
 > isVarPat (Clause (PTerm:ps) _) = True
@@ -77,10 +48,10 @@ and if we don't matching can get confused).
 > partition ctxt x = error "Can't happen PMComp partition"
 
 > doCaseComp :: Gamma Name ->
->               [Clause] -> State CS ([Name], SimpleCase Name)
+>               [Clause] -> State CS ([Name], TSimpleCase Name)
 > doCaseComp ctxt cs = do vs <- newVars cs
 >                         let (cs', vs') = reOrder cs vs
->                         sc <- match ctxt (map mkVT vs') cs' ErrorCase
+>                         sc <- match ctxt (map mkVT vs') cs' TErrorCase
 >                         -- return names in original order (this is the
 >                         -- argument list we're making)
 >                         return (vs, sc)
@@ -121,16 +92,16 @@ Count the number of different constructor forms in xs
 > match :: Gamma Name -> 
 >          [TT Name] -> -- arguments
 >          [Clause] -> -- clauses
->          SimpleCase Name -> -- fallthrough (error case)
->          State CS (SimpleCase Name)
+>          TSimpleCase Name -> -- fallthrough (error case)
+>          State CS (TSimpleCase Name)
 > match ctxt [] ((Clause [] ret):_) err 
->           = return $ Tm ret -- run out of arguments
+>           = return $ TTm ret -- run out of arguments
 > match ctxt vs cs err 
 >       = mixture ctxt vs (partition ctxt cs) err
 
 > mixture :: Gamma Name -> 
 >            [TT Name] ->
->            [Partition] -> SimpleCase Name -> State CS (SimpleCase Name)
+>            [Partition] -> TSimpleCase Name -> State CS (TSimpleCase Name)
 > mixture ctxt vs [] err = return err
 > mixture ctxt vs ((Cons ms):ps) err 
 >     = do fallthrough <- (mixture ctxt vs ps err)
@@ -144,7 +115,7 @@ In the constructor rule:
 For each distinct constructor (or constant) create a group of possible
 patterns in ConType and Group
 
-> data ConType = CName Int -- ordinary named constructor
+> data ConType = CName Name Int -- ordinary named constructor
 >              | forall c. Constant c => CConst c -- constant pattern
 
 > data Group = ConGroup ConType -- constructor
@@ -152,20 +123,20 @@ patterns in ConType and Group
 >                    [([Pattern Name], Clause)] 
 
 > conRule :: Gamma Name -> [TT Name] ->
->            [Clause] -> SimpleCase Name -> State CS (SimpleCase Name)
+>            [Clause] -> TSimpleCase Name -> State CS (TSimpleCase Name)
 > conRule ctxt (v:vs) cs err = 
 >    do groups <- groupCons cs
 >       caseGroups ctxt (v:vs) groups err
 
 > caseGroups :: Gamma Name -> [TT Name] ->
->               [Group] -> SimpleCase Name ->
->               State CS (SimpleCase Name)
+>               [Group] -> TSimpleCase Name ->
+>               State CS (TSimpleCase Name)
 > caseGroups ctxt (v:vs) gs err
 >    = do g <- altGroups gs
->         return $ SCase v g
->   where altGroups [] = return [Default err]
->         altGroups ((ConGroup (CName i) args):cs)
->           = do g <- altGroup i args
+>         return $ TSCase v g
+>   where altGroups [] = return [TDefault err]
+>         altGroups ((ConGroup (CName n i) args):cs)
+>           = do g <- altGroup n i args
 >                rest <- altGroups cs
 >                return (g:rest)
 >         altGroups ((ConGroup (CConst cval) args):cs)
@@ -173,15 +144,15 @@ patterns in ConType and Group
 >                rest <- altGroups cs
 >                return (g:rest)
 
->         altGroup i gs 
+>         altGroup n i gs 
 >            = do (newArgs, nextCs) <- argsToAlt gs
 >                 matchCs <- match ctxt (map P newArgs++vs)
 >                                           nextCs err
->                 return $ Alt i newArgs matchCs
+>                 return $ TAlt n i newArgs matchCs
 >         altConstGroup n gs
 >            = do (_, nextCs) <- argsToAlt gs
 >                 matchCs <- match ctxt vs nextCs err
->                 return $ ConstAlt n matchCs
+>                 return $ TConstAlt n matchCs
 
 Find out how many new arguments we need to generate for the next step
 of matching (since we're going to be matching further on the arguments
@@ -220,15 +191,15 @@ new set of clauses to match.
 >            gc acc' cs
 
 >          addGroup p ps res acc = case p of
->             PCon i _ _ args -> return $ addg i args (Clause ps res) acc
+>             PCon i con _ args -> return $ addg con i args (Clause ps res) acc
 >             PConst cval -> return $ addConG cval (Clause ps res) acc
 >             pat -> fail $ show pat ++ " is not a constructor or constant (can't happen)"
           
->          addg i conargs res [] 
->                   = [ConGroup (CName i) [(conargs, res)]]
->          addg i conargs res (g@(ConGroup (CName j) cs):gs)
->               | i == j = (ConGroup (CName i) (cs ++ [(conargs, res)])):gs
->               | otherwise = g:(addg i conargs res gs)
+>          addg con i conargs res [] 
+>                   = [ConGroup (CName con i) [(conargs, res)]]
+>          addg con i conargs res (g@(ConGroup (CName n j) cs):gs)
+>               | i == j = (ConGroup (CName n i) (cs ++ [(conargs, res)])):gs
+>               | otherwise = g:(addg con i conargs res gs)
 
 >          addConG :: Constant c => c -> Clause -> [Group] -> [Group]
 >          addConG con res [] = [ConGroup (CConst con) [([],res)]]
@@ -270,7 +241,7 @@ case args of
    patsn -> rn[p/v]
 
 > varRule :: Gamma Name -> [TT Name] ->
->            [Clause] -> SimpleCase Name -> State CS (SimpleCase Name)
+>            [Clause] -> TSimpleCase Name -> State CS (TSimpleCase Name)
 > varRule ctxt (v:vs) alts err = do
 >     let alts' = map (repVar v) alts
 >     match ctxt vs alts' err
