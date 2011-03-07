@@ -93,7 +93,7 @@ Typecheck a term in the context of the given hole
 > holecheck :: Name -> Gamma Name -> Indexed Name ->
 >              Raw -> IvorM (Indexed Name, Indexed Name)
 > holecheck n gam state raw = case (findhole gam (Just n) state docheck) of
->                                Nothing -> fail "No such hole binder"
+>                                Nothing -> tacfail "No such hole binder"
 >                                (Just x) -> x
 >    where docheck gam env _ = check gam env raw Nothing
 
@@ -126,7 +126,7 @@ FIXME: Why not use a state monad for the unified variables in rt?
 >               | x == n = do (Ind b',u) <- tactic gam env (Ind b)
 >                             return (b',u)
 
-                | otherwise = return (b, []) -- fail "No such hole"
+                | otherwise = return (b, []) -- tacfail "No such hole"
 
 >           rt env b@(Bind x (B Lambda ty) _)
 >               | x == n = do (Ind b',u) <- tactic gam env (Ind b)
@@ -219,7 +219,7 @@ Begin solving a goal
 >         = tacret $ Ind (Bind x (B (Guess newtm) ty) sc)
 >   where newtm = Bind h0 (B Hole ty) (Sc (P h0))
 >         h0 = uniqify h (x:(map fst env))
-> attack _ _ _ t = fail $ "Internal error; not an attackable hole: " ++ show t
+> attack _ _ _ t = tacfail $ "Internal error; not an attackable hole: " ++ show t
 
 Try filling the current goal with a term
 
@@ -253,7 +253,7 @@ Try filling the current goal with a term
 >          nodups [] = []
 >          nodups ((x,y):xs) | x `elem` (map fst xs) = nodups xs
 >                            | otherwise = (x,y):(nodups xs)
-> fill _ _ _ _ = fail "Can't try to fill something which isn't a hole"
+> fill _ _ _ _ = tacfail "Can't try to fill something which isn't a hole"
 
 Use defaults to fill in arguments which don't appear in the goal (hence aren't
 solvable by unification). (FIXME: Not yet implemented.)
@@ -339,9 +339,9 @@ names. Let's record which ones...
 >                        else ((x,ty):cl', Ind sc')
 >             | otherwise = ([], tm)
 
-> refine _ _ _ _ _ = fail "Not focused on a hole"
+> refine _ _ _ _ _ = tacfail "Not focused on a hole"
 
-        trace (show claims) $ fail "Unimplemented"
+        trace (show claims) $ tacfail "Unimplemented"
 
 > getClaims :: TT Name -> [(Name, TT Name)]
 > getClaims (Bind n (B Pi ty) (Sc sc)) = (n,ty):(getClaims sc)
@@ -375,17 +375,17 @@ Give up the current try
 > regret :: Tactic
 > regret _ _ (Ind (Bind x (B (Guess gv) ty) sc)) =
 >     tacret $ Ind (Bind x (B Hole ty) sc)
-> regret _ _ _ = fail "Can't regret something you haven't done"
+> regret _ _ _ = tacfail "Can't regret something you haven't done"
 
 Attempt to solve the current goal with the guess
 
 > solve :: Tactic
 > solve _ _ (Ind (Bind x (B (Guess gv) ty) sc))
 >       | (pure gv) = tacret (Ind (Bind x (B (Let (finind gv)) ty) sc))
->       | otherwise = fail "I see a hole in your solution"
+>       | otherwise = tacfail "I see a hole in your solution"
 >    where finind t = case (finalise (Ind t)) of
 >                        (Ind x) -> x
-> solve _ _ _ = fail "Not a guess"
+> solve _ _ _ = tacfail "Not a guess"
 
 Substitute a let bound variable into a term
 
@@ -394,7 +394,7 @@ Substitute a let bound variable into a term
 >     tacret $ {- trace ("Cutting "++show v++" into "++show sc) $ -}
 >            Ind (substName x (makePsEnv (map fst env) v) sc)
 >   where
-> cut _ _ _ = fail "Not a let bound term"
+> cut _ _ _ = tacfail "Not a let bound term"
 
 Normalise the goal
 
@@ -402,8 +402,8 @@ Normalise the goal
 > evalGoal gam env (Ind (Bind x (B Hole ty) sc)) =
 >    do let (Ind nty) = eval_nf_env (ptovenv env) gam (finalise (Ind ty))
 >       tacret $ Ind (Bind x (B Hole nty) sc)
-> evalGoal _ _ (Ind (Bind x _ _)) = fail $ "evalGoal: " ++ show x ++ " Not a hole"
-> evalGoal _ _ _ = fail "evalGoal: Can't happen"
+> evalGoal _ _ (Ind (Bind x _ _)) = tacfail $ "evalGoal: " ++ show x ++ " Not a hole"
+> evalGoal _ _ _ = tacfail "evalGoal: Can't happen"
 
 Do beta reductions (i.e., normalise the goal without expanding global names)
 
@@ -411,22 +411,22 @@ Do beta reductions (i.e., normalise the goal without expanding global names)
 > betaReduce gam env (Ind (Bind x (B Hole ty) sc)) =
 >    do let (Ind nty) = normaliseEnv (ptovenv env) (emptyGam) (finalise (Ind ty))
 >       tacret $ Ind (Bind x (B Hole nty) sc)
-> betaReduce _ _ (Ind (Bind x _ _)) = fail $ "betaReduce: " ++ show x ++ " Not a hole"
-> betaReduce _ _ _ = fail "betaReduce: Not a binder, can't happen"
+> betaReduce _ _ (Ind (Bind x _ _)) = tacfail $ "betaReduce: " ++ show x ++ " Not a hole"
+> betaReduce _ _ _ = tacfail "betaReduce: Not a binder, can't happen"
 
 Normalise the goal, only expanding the given global name.
 
 > reduceWith :: Name ->Tactic
 > reduceWith fn gam env (Ind (Bind x (B Hole ty) sc)) =
 >    do case glookup fn gam of
->           Nothing -> fail $ "Unknown name " ++ show fn
+>           Nothing -> tacfail $ "Unknown name " ++ show fn
 >           Just (v,t) -> do
 >              let (Ind nty) = normaliseEnv (ptovenv env) 
 >                                           (extend emptyGam (fn, (G v t defplicit)))
 >                                           (finalise (Ind ty))
 >              tacret $ Ind (Bind x (B Hole nty) sc)
-> reduceWith _ _ _ (Ind (Bind x _ _)) = fail $ "reduceWith: " ++ show x ++ " Not a hole"
-> reduceWith _ _ _ _ = fail "reduceWith: Not a binder, can't happen"
+> reduceWith _ _ _ (Ind (Bind x _ _)) = tacfail $ "reduceWith: " ++ show x ++ " Not a hole"
+> reduceWith _ _ _ _ = tacfail "reduceWith: Not a binder, can't happen"
 
 Do case analysis by the given elimination operator
 
@@ -462,7 +462,7 @@ Do case analysis by the given elimination operator
 >            meths <- getMeths sc
 >            let names = map fst env
 >            return ((mname,(uniqifyBinders names ty)), meths)
->     getBits _ = fail "What's my motivation?"
+>     getBits _ = tacfail "What's my motivation?"
 >     getMeths (Bind meth (B Pi ty) (Sc sc)) = do
 >         rest <- getMeths sc
 >         return ((meth,ty):rest)
@@ -474,7 +474,7 @@ Do case analysis by the given elimination operator
 >             substTerm earg (P marg) (Sc (motiveType xs ty))
 >     mkGuess [] n = n
 >     mkGuess ((x,_):xs) n = (mkGuess xs (App n (P x)))
-> by _ _ _ _ = fail "Not focussed on a hole"
+> by _ _ _ _ = tacfail "Not focussed on a hole"
 
 Do case analysis on the given term. Work out which elimination rule is
 needed and the necessary indices, then run the 'by' tactic.
@@ -492,7 +492,7 @@ otherwise.
 >        let indices = getArgs btin
 >        let ty = getFun btin
 >        runCaseTac rec ty (indices++[bvin]) gam env tm
-> casetac _ _ _ _ _ = fail "Not focussed on a hole"
+> casetac _ _ _ _ _ = tacfail "Not focussed on a hole"
 
 > runCaseTac :: Bool -> TT Name -> [TT Name] -> Tactic
 > runCaseTac rec (TyCon n _) args gam env tm =
@@ -501,11 +501,11 @@ otherwise.
 >             by (mkapp (Var (if rec then erule else crule))
 >                                (map forget args)) gam env tm
 >         (Just (TCon _ NoConstructorsYet)) ->
->              fail $ (show n) ++ " is declared but not defined"
->         _ -> fail $ (show n) ++ " is not a type constructor"
+>              tacfail $ (show n) ++ " is declared but not defined"
+>         _ -> tacfail $ (show n) ++ " is not a type constructor"
 
 > runCaseTac _ x indices gam env tm =
->     fail $ (show x) ++ " is not a type constructor"
+>     tacfail $ (show x) ++ " is not a type constructor"
 
 elimargs <- Get arguments to elimination operator
 motiveargs <- Get expected arguments to motive
@@ -534,9 +534,9 @@ Rename a binder
 >          tacret $ Ind (Bind x (B Hole renamed) sc)
 >   where doRename n (Bind x b sc)
 >             = return (Bind n b (Sc (substName x (P n) sc)))
->         doRename _ _ = fail "Nothing to rename"
-> rename _ _ _ (Ind (Bind x _ _)) = fail $ "rename: " ++ show x ++ " Not a hole"
-> rename _ _ _ _ = fail "rename: Not a binder, can't happen"
+>         doRename _ _ = tacfail "Nothing to rename"
+> rename _ _ _ (Ind (Bind x _ _)) = tacfail $ "rename: " ++ show x ++ " Not a hole"
+> rename _ _ _ _ = tacfail "rename: Not a binder, can't happen"
 
 Make sure the binder has a user accessible name
 
@@ -548,11 +548,11 @@ Make sure the binder has a user accessible name
 >   where doRename (Bind x b sc)
 >             = do let n = uniqify (sensible x) (map fst env)
 >                  return (Bind n b (Sc (substName x (P n) sc)))
->         doRename _ = fail "Nothing to rename"
+>         doRename _ = tacfail "Nothing to rename"
 >         sensible n@(MN _) = UN "X"
 >         sensible x = x
-> rename_user _ _ (Ind (Bind x _ _)) = fail $ "rename: " ++ show x ++ " Not a hole"
-> rename_user _ _ _ = fail "rename: Not a binder, can't happen"
+> rename_user _ _ (Ind (Bind x _ _)) = tacfail $ "rename: " ++ show x ++ " Not a hole"
+> rename_user _ _ _ = tacfail "rename: Not a binder, can't happen"
 
 Introduce a lambda or let
 
@@ -563,8 +563,8 @@ Introduce a lambda or let
 >            let ty' = makePsEnv (map fst env) ty
 >            introsty (uniqify (sensible x) (map fst env)) ty' (Sc p)
 >     | otherwise =
->            fail $ "Not an introduceable hole. Attack it first."
-> intro _ _ _ = fail $ "Can't introduce here."
+>            tacfail $ "Not an introduceable hole. Attack it first."
+> intro _ _ _ = tacfail $ "Can't introduce here."
 
 > sensible (MN _) = (UN "X") -- don't use machine names
 > sensible x = x
@@ -573,7 +573,7 @@ Introduce a lambda or let
 >     tacret $ Ind (Bind y (B Lambda s) (Sc (Bind x (B Hole t) xscope)))
 > introsty x (Bind y (B (Let v) s) (Sc t)) xscope =
 >     tacret $ Ind (Bind y (B (Let v) s) (Sc (Bind x (B Hole t) xscope)))
-> introsty x b xscope = fail $ "Nothing to introduce from " ++ show b
+> introsty x b xscope = tacfail $ "Nothing to introduce from " ++ show b
 
 Tidy up a term to remove all holes which are not used.
 
@@ -598,8 +598,8 @@ Replace a goal with an equivalent (convertible) goal.
 >        checkConvEnv env gam (Ind goalv) (finalise (Ind ty))
 >                         (IMessage "Not equivalent to the Goal")
 >        tacret $ Ind (Bind x (B Hole goalvin) sc)
-> equiv _ _ _ (Ind (Bind x _ _)) = fail $ "equiv: " ++ show x ++ " Not a hole"
-> equiv _ _ _ _ = fail "equiv: Not a binder, can't happen"
+> equiv _ _ _ (Ind (Bind x _ _)) = tacfail $ "equiv: " ++ show x ++ " Not a hole"
+> equiv _ _ _ _ = tacfail "equiv: Not a binder, can't happen"
 
 > generalise :: Raw -> Tactic
 > generalise expr gam env (Ind (Bind x (B Hole tyin) sc)) =
@@ -616,8 +616,8 @@ Replace a goal with an equivalent (convertible) goal.
 >        let newty = Bind newname (B Pi exprtin) (Sc newtysc)
 >        let newsc = substName x (App (P x) exprvin) sc
 >        tacret $ Ind (Bind x (B Hole newty) (Sc newsc))
-> generalise _ _ _ (Ind (Bind x b sc)) = fail $ "generalise: " ++ show x ++ " Not a hole"
-> generalise _ _ _ _ = fail "generalise: Can't happen"
+> generalise _ _ _ (Ind (Bind x b sc)) = tacfail $ "generalise: " ++ show x ++ " Not a hole"
+> generalise _ _ _ _ = tacfail "generalise: Can't happen"
 
 Replace a term in the goal according to the given equality rule, and the
 given equality type and replacement/symmetry lemmas.
@@ -650,10 +650,10 @@ Boolean flag (flip) is True if symmetry should be applied first.
 >          claimname = mkns x (UN "q")
 >          getTypes (App (App (App (App eq x) _) a) b) = return (x,a,b)
 >          getTypes (App (App (App eq x) a) b) = return (x,a,b)
->          getTypes t = fail $ "Rule is not of equality type: " ++ show t
+>          getTypes t = tacfail $ "Rule is not of equality type: " ++ show t
 >          mkns (UN a) (UN b) = UN (a++"_"++b)
-> replace _ _ _ _ _ _ _ (Ind (Bind x b sc)) = fail $ "replace: " ++ show x ++ " Not a hole"
-> replace _ _ _ _ _ _ _ _ = fail "replace: Not a binder, can't happen"
+> replace _ _ _ _ _ _ _ (Ind (Bind x b sc)) = tacfail $ "replace: " ++ show x ++ " Not a hole"
+> replace _ _ _ _ _ _ _ _ = tacfail "replace: Not a binder, can't happen"
 
 Create an axiom for the current goal (quantifying over all bound variables
 in the goal, and [FIXME!] all variables they depend on) and use it to
@@ -672,8 +672,8 @@ solve the goal.
 >        getUsedBoundVars ((n,b@(B _ ty)):bs) ns
 >            | n `elem` ns = (n,ty):(getUsedBoundVars bs ns)
 >            | otherwise = getUsedBoundVars bs ns
-> axiomatise _ _ _ _ (Ind (Bind x b sc)) = fail $ "axiomatise: " ++ show x ++ " Not a hole"
-> axiomatise _ _ _ _ _ = fail "axiomatise: Not a binder, can't happen"
+> axiomatise _ _ _ _ (Ind (Bind x b sc)) = tacfail $ "axiomatise: " ++ show x ++ " Not a hole"
+> axiomatise _ _ _ _ _ = tacfail "axiomatise: Not a binder, can't happen"
 
 Prepare to return a quoted value
 
@@ -689,10 +689,10 @@ Prepare to return a quoted value
 >        let filltm = Stage (Quote tm)
 >        return (Ind (Bind h (B (Guess filltm) tyin) sc), [AddGoal qv])
 >   where checkQuoted (Stage (Code t)) = return t
->         checkQuoted _ = fail "Not a code type"
+>         checkQuoted _ = tacfail "Not a code type"
 >         mkns (UN a) (UN b) = UN (a++"_"++b)
-> quote _ _ (Ind (Bind x b sc)) = fail $ "quote: " ++ show x ++ " Not a hole"
-> quote _ _ _ = fail "quote: Not a binder, can't happen"
+> quote _ _ (Ind (Bind x b sc)) = tacfail $ "quote: " ++ show x ++ " Not a hole"
+> quote _ _ _ = tacfail "quote: Not a binder, can't happen"
 
 > ptovenv [] = []
 > ptovenv ((x,b):xs) = (x,fmap finind b):(ptovenv xs)

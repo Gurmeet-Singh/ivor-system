@@ -23,6 +23,8 @@
 
 > ifail = Left
 
+> tacfail str = ifail (IMessage str)
+
 Generic error checking can go here:
 
 Check that all the names are real rather than implicit and inferred
