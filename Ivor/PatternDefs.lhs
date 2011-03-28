@@ -338,7 +338,7 @@ fails, reporting which case isn't matched, if patterns don't cover.
 > checkCoverage pats [] = return ()
 > checkCoverage pats (c:cs)
 >     | length (filter (matches c) pats) > 0 = checkCoverage pats cs
->     | otherwise = fail $ "Missing clause: " ++ show c
+>     | otherwise = tacfail $ "Missing clause: " ++ show c
 
 > matches p t = getMatches p t /= Nothing
 
