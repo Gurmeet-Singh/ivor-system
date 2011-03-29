@@ -125,10 +125,10 @@
 > instance IsTerm String where
 >     check ctxt str = case parseTermString str of
 >          (Success tm) -> Ivor.CtxtTT.check ctxt (forget tm)
->          (Failure err) -> fail err
+>          (Failure err) -> ttfail err
 >     raw str = case parseTermString str of
 >          (Success tm) -> return $ forget tm
->          (Failure err) -> fail err
+>          (Failure err) -> ttfail err
 
 > instance IsTerm Raw where
 >     check (Ctxt st) t = do
@@ -153,7 +153,7 @@
 >     addData' elim (Ctxt st) str = do
 >         case (parseDataString str) of
 >             Success ind -> addData' elim (Ctxt st) ind
->             Failure err -> fail err
+>             Failure err -> ttfail err
 
 > instance IsData Inductive where
 >     addData' elim (Ctxt st) ind = do st' <- tt $ doMkData elim st (datadecl ind)
@@ -169,7 +169,7 @@
 > checkNotExists n gam = case lookupval n gam of
 >                                 Just Undefined -> return ()
 >                                 Just (TCon _ NoConstructorsYet) -> return ()
->                                 Just _ -> fail $ show n ++ " already defined"
+>                                 Just _ -> ttfail $ show n ++ " already defined"
 >                                 Nothing -> return ()
 
 > data PClause = PClause {
@@ -209,7 +209,7 @@
 >     toPat gam _ = Placeholder
 >     matchable gam n
 >        = case lookupval n gam of
->            Just (DCon _ _) -> True -- since it's a constructor
+>            Just (DCon _ _ _) -> True -- since it's a constructor
 >            Nothing -> True -- since it' a variable
 >            _ -> False
 >            
@@ -248,7 +248,7 @@
 >         (ndefs',vnewnames) 
 >                <- if (null newnames) then return (ndefs, [])
 >                      else do when (not (Holey `elem` opts)) $ 
->                                    fail "No metavariables allowed"
+>                                    ttfail "No metavariables allowed"
 >                              let vnew = map (\ (n,t) -> 
 >                                              (n, view (Term (t,Ind TTCore.Star)))) newnames
 >                              let ngam = foldl (\g (n, t) ->
@@ -300,14 +300,14 @@ context
 >         let ctxt = defs st
 >         term <- raw tm
 >         case (checkAndBind tmp [] term (Just inty)) of
->              (Right (v,t@(Ind sc),_)) -> do
+>              (Right (Ind v,t@(Ind sc),_)) -> do
 >                 if (convert (defs st) inty t)
 >                     then (do
 >                       checkBound (getNames (Sc sc)) t
->                       newdefs <- gInsert n (G (Fun [Recursive] v) t defplicit) ctxt
+>                       newdefs <- gInsert n (G (Fun [Recursive] (Ind (forced ctxt v))) t defplicit) ctxt
 >                               -- = Gam ((n,G (Fun [] v) t):ctxt)
 >                       return $ Ctxt st { defs = newdefs })
->                     else (fail $ "The given type and inferred type do not match, inferred " ++ show t)
+>                     else (ttfail $ "The given type and inferred type do not match, inferred " ++ show t)
 >              (Left err) -> tt $ ifail err
 
 
@@ -318,9 +318,9 @@ context
 >         v <- raw tm
 >         let ctxt = defs st
 >         case (typecheck ctxt v) of
->             (Right (v',t@(Ind sc))) -> do
+>             (Right (Ind v',t@(Ind sc))) -> do
 >                 checkBound (getNames (Sc sc)) t
->                 newdefs <- gInsert n (G (Fun [] v') t defplicit) ctxt
+>                 newdefs <- gInsert n (G (Fun [] (Ind (forced ctxt v'))) t defplicit) ctxt
 >                 -- let newdefs = Gam ((n,G (Fun [] v) t):ctxt)
 >                 return $ Ctxt st { defs = newdefs }
 >             (Left err) -> tt $ ifail err
@@ -328,12 +328,12 @@ context
 > checkBound :: [Name] -> (Indexed Name) -> TTM ()
 > checkBound [] t = return ()
 > checkBound (nm@(MN ("INFER",_)):ns) t
->                = fail $ "Can't infer value for " ++ show nm ++ " in " ++ show t
+>                = ttfail $ "Can't infer value for " ++ show nm ++ " in " ++ show t
 > checkBound (_:ns) t = checkBound ns t
 
 > -- |Forget a definition and all following definitions.
 > forgetDef :: Context -> Name -> TTM Context
-> forgetDef (Ctxt st) n = fail "Not any more..."
+> forgetDef (Ctxt st) n = ttfail "Not any more..."
 
 do let olddefs = defs st
                             newdefs <- f olddefs n
@@ -615,7 +615,7 @@ intuitive)
 >                                              holequeue = [n],
 >                                              hidden = []
 >                                              }
->            (Just t) -> fail "Already a proof in progress"
+>            (Just t) -> ttfail "Already a proof in progress"
 
 > -- |Begin a new interactive definition.
 > -- Actually, just the same as 'theorem' but this version allows you to
@@ -634,7 +634,7 @@ intuitive)
 >                                               holequeue = [n],
 >                                               hidden = []
 >                                               }
->            (Just t) -> fail "Already a proof in progress"
+>            (Just t) -> ttfail "Already a proof in progress"
 
 > -- |Suspend the current proof. Clears the current proof state; use 'resume'
 > -- to continue the proof.
@@ -660,14 +660,14 @@ intuitive)
 >         Just (Undefined,ty) ->
 >             do let st' = st { defs = remove n (defs st) }
 >                theorem (Ctxt st') n (Term (ty, Ind TTCore.Star))
->         _ -> fail "No such suspended proof"
+>         _ -> ttfail "No such suspended proof"
 
 > -- | Freeze a name (i.e., set it so that it does not reduce)
 > -- Fails if the name does not exist.
 > freeze :: Context -> Name -> TTM Context
 > freeze (Ctxt st) n
 >      = case glookup n (defs st) of
->           Nothing -> fail $ show n ++ " is not defined"
+>           Nothing -> ttfail $ show n ++ " is not defined"
 >           _ -> return $ Ctxt st { defs = Ivor.Values.freeze n (defs st) }
 
 > -- | Unfreeze a name (i.e., allow it to reduce).
@@ -675,7 +675,7 @@ intuitive)
 > thaw :: Context -> Name -> TTM Context
 > thaw (Ctxt st) n
 >      = case glookup n (defs st) of
->           Nothing -> fail $ show n ++ " is not defined"
+>           Nothing -> ttfail $ show n ++ " is not defined"
 >           _ -> return $ Ctxt st { defs = Ivor.Values.thaw n (defs st) }
 
 
@@ -691,7 +691,7 @@ intuitive)
 > -- | Restore a saved state; fails if none have been saved.
 > restore :: Context -> TTM Context
 > restore (Ctxt st) = case undoState st of
->                        Nothing -> fail "No saved state"
+>                        Nothing -> ttfail "No saved state"
 >                        (Just st') -> return $ Ctxt st'
 
 
@@ -714,7 +714,7 @@ Give a parseable but ugly representation of a term.
 > checkCtxt (Ctxt st) goal tm =
 >     do rawtm <- raw tm
 >        prf <- case proofstate st of
->                 Nothing -> fail "No proof in progress"
+>                 Nothing -> ttfail "No proof in progress"
 >                 Just x -> return x
 >        let h = case goal of
 >                (Goal x) -> x
@@ -722,7 +722,7 @@ Give a parseable but ugly representation of a term.
 >        case (Tactics.findhole (defs st) (Just h) prf holeenv) of
 >          (Just env) -> do t <- tt $ Ivor.Typecheck.check (defs st) env rawtm Nothing
 >                           return $ Term t
->          Nothing -> fail "No such goal"
+>          Nothing -> ttfail "No such goal"
 >  where holeenv :: Gamma Name -> Env Name -> Indexed Name -> Env Name
 >        holeenv gam hs _ = Tactics.ptovenv hs
 
@@ -735,7 +735,7 @@ Give a parseable but ugly representation of a term.
 >     = do atm <- checkCtxt ctxt goal a
 >          btm <- checkCtxt ctxt goal b
 >          prf <- case proofstate st of
->                 Nothing -> fail "No proof in progress"
+>                 Nothing -> ttfail "No proof in progress"
 >                 Just x -> return x
 >          let (Term (av,_)) = atm
 >          let (Term (bv,_)) = btm
@@ -746,7 +746,7 @@ Give a parseable but ugly representation of a term.
 >                (Just env) -> case checkConvEnv env (defs st) av bv (IMessage "") of
 >                     Right _ -> return True
 >                     _ -> return False
->                Nothing -> fail "No such goal"
+>                Nothing -> ttfail "No such goal"
 >  where holeenv :: Gamma Name -> Env Name -> Indexed Name -> Env Name
 >        holeenv gam hs _ = Tactics.ptovenv hs
 
@@ -755,7 +755,7 @@ Give a parseable but ugly representation of a term.
 > evalCtxt (Ctxt st) goal tm =
 >     do rawtm <- raw tm
 >        prf <- case proofstate st of
->                 Nothing -> fail "No proof in progress"
+>                 Nothing -> ttfail "No proof in progress"
 >                 Just x -> return x
 >        let h = case goal of
 >                (Goal x) -> x
@@ -764,7 +764,7 @@ Give a parseable but ugly representation of a term.
 >          (Just env) -> do (tm, ty) <- tt $ Ivor.Typecheck.check (defs st) env rawtm Nothing
 >                           let tnorm = eval_nf_env env (defs st) tm
 >                           return $ Term (tnorm, ty)
->          Nothing -> fail "No such goal"
+>          Nothing -> ttfail "No such goal"
 >  where holeenv :: Gamma Name -> Env Name -> Indexed Name -> Env Name
 >        holeenv gam hs _ = Tactics.ptovenv hs
 
@@ -772,13 +772,13 @@ Give a parseable but ugly representation of a term.
 > getDef :: Context -> Name -> TTM Term
 > getDef (Ctxt st) n = case glookup n (defs st) of
 >                         Just ((Fun _ tm),ty) -> return $ Term (tm,ty)
->                         _ -> fail "Not a function name"
+>                         _ -> ttfail "Not a function name"
 
 > -- |Get the type of a definition in the context.
 > getType :: Context -> Name -> TTM Term
 > getType (Ctxt st) n = case glookup n (defs st) of
 >                         Just (_,ty) -> return $ Term (ty,Ind TTCore.Star)
->                         _ -> fail "Not a defined name"
+>                         _ -> ttfail "Not a defined name"
 
 > -- |Check whether a name is defined
 > defined :: Context -> Name -> Bool
@@ -797,7 +797,7 @@ Give a parseable but ugly representation of a term.
 >             return (Inductive n [] (getIndices (view (Term (ty, Ind TTCore.Star))))
 >                                    (getTyType (view (Term (ty, Ind TTCore.Star))))
 >                                    (getConTypes cons))
->         _ -> fail "Not an inductive family"
+>         _ -> ttfail "Not an inductive family"
 >   where getIndices v = getArgTypes v
 >         getTyType v = VTerm.getReturnType v
 >         getConTypes [] = []
@@ -815,7 +815,7 @@ Give a parseable but ugly representation of a term.
 >           Just ((Fun _ ind), ty) ->
 >               return $ (view (Term (ty, Ind TTCore.Star)),
 >                         Patterns [mkCAFpat ind])
->           _ -> fail "Not a pattern matching definition"
+>           _ -> ttfail "Not a pattern matching definition"
 >    where getPats (PMFun _ ps) = ps
 >          mkPat (Sch ps bs ret) 
 >               = PClause (map viewPat ps) 
@@ -836,7 +836,7 @@ Give a parseable but ugly representation of a term.
 >               return (pmf, t, g, ty, plicit)
 >           Just ((Fun _ ind), ty, plicit) -> 
 >               return (PMFun 0 [Sch [] [] ind], True, False, ty, plicit)
->           _ -> fail "Not a pattern matching definition"
+>           _ -> ttfail "Not a pattern matching definition"
 
 > -- |Lookup a pattern matching definition in the context. Return the
 > -- argument names and compiled simple case tree.
@@ -847,7 +847,7 @@ Give a parseable but ugly representation of a term.
 >                  Right (ns, mkSC sc)
 >           Just ((Fun _ (Ind ind)), ty) ->
 >               return ([], mkSC (TTm ind))
->           _ -> fail "Not a pattern matching definition"
+>           _ -> ttfail "Not a pattern matching definition"
 >   where mkSC :: TSimpleCase Name -> SimpleCase
 >         mkSC (TTm t) = Tm (mkSCtm t)
 >         mkSC TErrorCase = ErrorCase
@@ -903,31 +903,31 @@ Give a parseable but ugly representation of a term.
 > getConstructors (Ctxt st) n
 >      = case glookup n (defs st) of
 >           Just ((TCon _ (Elims _ _ cs)),ty) -> return cs
->           _ -> fail "Not a type constructor"
+>           _ -> ttfail "Not a type constructor"
 
 > -- |Find out what type of variable the given name is
 > nameType :: Context -> Name -> TTM NameType
 > nameType (Ctxt st) n 
 >     = case glookup n (defs st) of
->         Just ((DCon _ _), _) -> return DataCon
+>         Just ((DCon _ _ _), _) -> return DataCon
 >         Just ((TCon _ _), _) -> return TypeCon
 >         Just _ -> return Bound -- any function
->         Nothing -> fail "No such name"
+>         Nothing -> ttfail "No such name"
 
 > -- | Get an integer tag for a constructor. Each constructor has a tag
 > -- unique within the data type, which could be used by a compiler.
 > getConstructorTag :: Context -> Name -> TTM Int
 > getConstructorTag (Ctxt st) n
 >    = case glookup n (defs st) of
->        Just ((DCon tag _), _) -> return tag
->        _ -> fail "Not a constructor"
+>        Just ((DCon tag _ _), _) -> return tag
+>        _ -> ttfail "Not a constructor"
 
 > -- | Get the arity of the given constructor.
 > getConstructorArity :: Context -> Name -> TTM Int
 > getConstructorArity (Ctxt st) n
 >    = case glookup n (defs st) of
->        Just ((DCon _ _), Ind ty) -> return (length (getExpected ty))
->        _ -> fail "Not a constructor"
+>        Just ((DCon _ _ _), Ind ty) -> return (length (getExpected ty))
+>        _ -> ttfail "Not a constructor"
 
 Examine pattern matching elimination rules
 
@@ -946,7 +946,7 @@ Examine pattern matching elimination rules
 >                          Ivor.TT.Elim -> erule
 >             elim <- lookupM rule (eliminators st)
 >             return $ Patterns $ map mkRed (fst $ snd elim)
->       Nothing -> fail $ (show nm) ++ " is not a type constructor"
+>       Nothing -> ttfail $ (show nm) ++ " is not a type constructor"
 >  where mkRed (RSch pats (RWRet ret)) = PClause (map viewRaw pats) [] (viewRaw ret)
 >         -- a reduction will only have variables and applications
 >        viewRaw (Var n) = Name Free n
@@ -985,10 +985,10 @@ Get the actions performed by the last tactic
 > -- |Get the current proof term, if we are in the middle of a proof.
 > proofterm :: Context -> TTM Term
 > proofterm (Ctxt st) = case proofstate st of
->                         Nothing -> fail "No proof in progress"
+>                         Nothing -> ttfail "No proof in progress"
 >                         Just (Ind (Bind _ (B (Guess v) t) _)) ->
 >                             return $ Term (Ind v,Ind t)
->                         Just t -> fail $ "Proof finished; " ++ show t
+>                         Just t -> ttfail $ "Proof finished; " ++ show t
 
 > -- |Get the type and context of the given goal, if it exists
 > getGoal :: Context -> Goal -> TTM ([(Name,Term)], Term)
@@ -997,11 +997,11 @@ Get the actions performed by the last tactic
 >                   (Goal x) -> x
 >                   DefaultGoal -> head (holequeue st) in
 >       case (proofstate st) of
->         Nothing -> fail "No proof in progress"
+>         Nothing -> ttfail "No proof in progress"
 >         (Just tm) ->
 >             case (Tactics.findhole (defs st) (Just h) tm getHoleTerm) of
 >               Just x -> return x
->               Nothing -> fail "No such goal"
+>               Nothing -> ttfail "No such goal"
 
 > getHoleTerm gam hs tm = (getctxt hs, 
 >                          Term (normaliseEnv hs (emptyGam) (binderType tm), 
@@ -1028,14 +1028,14 @@ Get the actions performed by the last tactic
 >                                        -- just lambda bindings (False)
 >          -> Goal -> TTM GoalData
 > goalData (Ctxt st) all goal = case proofstate st of
->         Nothing -> fail "No proof in progress"
+>         Nothing -> ttfail "No proof in progress"
 >         (Just prf) ->
 >             let h = case goal of
 >                           (Goal x) -> x
 >                           DefaultGoal -> head (holequeue st) in
 >               case (Tactics.findhole (defs st) (Just h) prf holedata) of
 >                  (Just x) -> return x
->                  Nothing -> fail "No such goal"
+>                  Nothing -> ttfail "No such goal"
 >  where holedata :: Gamma Name -> Env Name -> Indexed Name -> GoalData
 >        holedata gam hs tm = hd' (Tactics.ptovenv hs) (finalise tm) -- (normaliseEnv hs (Gam []) (finalise tm))
 >        hd' hs (Ind (Bind n (B _ tm) _))
@@ -1052,7 +1052,7 @@ Get the actions performed by the last tactic
 > -- | Get the names and types of all goals
 > subGoals :: Context -> TTM [(Name,Term)]
 > subGoals (Ctxt st) = case proofstate st of
->         Nothing -> fail "No proof in progress"
+>         Nothing -> ttfail "No proof in progress"
 >         (Just prf) -> return $
 >                        map (\ (x,ty) -> (x,Term (ty,Ind TTCore.Star)))
 >                         $ Tactics.allholes (defs st) True prf
@@ -1061,7 +1061,7 @@ Get the actions performed by the last tactic
 > uniqueName :: Context -> Name -- ^ Suggested name
 >            -> TTM Name -- ^ Unique name based on suggested name
 > uniqueName (Ctxt st) n = case proofstate st of
->         Nothing -> fail "No proof in progress"
+>         Nothing -> ttfail "No proof in progress"
 >         (Just (Ind prf)) -> return $ uniqify n $ getBoundNames (Sc prf)
 
 Tactics
@@ -1096,7 +1096,7 @@ Tactics
 >              let newdefs = setRec name isrec defs'
 >              return $ Ctxt st { proofstate = Nothing, 
 >                             defs = newdefs } -- Gam (newdef:olddefs) }
->            Nothing -> fail "No proof in progress"
+>            Nothing -> ttfail "No proof in progress"
 >  where rec nm = case lookupval nm (defs st) of
 >                   Nothing -> False
 >                   _ -> True
@@ -1107,16 +1107,16 @@ Tactics
 >             (Ind (Bind x (B (TTCore.Let v) ty) (Sc (P n)))) | n == x =
 >     do let (Ind vnorm) = convNormalise (emptyGam) (finalise (Ind v))
 >        tt $ verify gam (Ind v)
->        return $ (x, G (Fun opts (Ind vnorm)) (finalise (Ind ty)) defplicit)
+>        return $ (x, G (Fun opts (Ind (forced gam vnorm))) (finalise (Ind ty)) defplicit)
 >   where opts = if freeze then [Frozen] else []
-> qedLift _ _ tm = fail $ "Not a complete proof " ++ show tm
+> qedLift _ _ tm = ttfail $ "Not a complete proof " ++ show tm
 
 > -- | Focus on a different hole, i.e. set the default goal.
 > focus :: Tactic
 > focus (Goal n) (Ctxt st)
 >    | n `elem` holequeue st
 >        = attack (Goal n) $ Ctxt st { holequeue = jumpqueue n (holequeue st) }
->    | otherwise = fail "No such goal"
+>    | otherwise = ttfail "No such goal"
 > focus _ x = return x -- Default goal already first
 
 > -- | Hide a premise
@@ -1203,7 +1203,7 @@ Apply two tactics consecutively to the same goal.
 Convert an internal tactic into a publicly available tactic.
 
 > runTac :: Tactics.Tactic -> Tactic
-> runTac tac goal (Ctxt st) | null (holequeue st) = fail "No more goals"
+> runTac tac goal (Ctxt st) | null (holequeue st) = ttfail "No more goals"
 > runTac tac goal (Ctxt st) = do
 >     let hole = case goal of
 >                     (Goal x) -> x
@@ -1243,7 +1243,7 @@ Convert an internal tactic into a publicly available tactic.
 > attack goal (Ctxt st) = do n <- getName
 >                            attackWith n goal (Ctxt st)
 >    where getName = do allnames <- case (proofstate st) of
->                             Nothing -> fail "No proof in progress"
+>                             Nothing -> ttfail "No proof in progress"
 >                             Just (Ind tm) ->
 >                                 return $ binderMap (\n _ _ -> n) tm
 >                       return $ uniqify (name "H") ((holequeue st)++allnames)
@@ -1468,7 +1468,7 @@ FIXME: Choose a sensible name here
 >     ctxt <- claim name rtype g ctxt
 >     fill (VTerm.Return (Name Bound name)) g ctxt
 >  where getRType (VTerm.Label _ _ ty) = return ty
->        getRType _ = fail "Not a labelled type"
+>        getRType _ = ttfail "Not a labelled type"
 
 > -- | Prepare to return a quoted value
 > quoteVal :: Tactic
@@ -1505,7 +1505,7 @@ FIXME: Choose a sensible name here
 >     = do gd <- goalData ctxt False g
 >          let ps = bindings gd
 >          tryall ps g ctxt
->    where tryall [] g ctxt = fail "No trivial solution found"
+>    where tryall [] g ctxt = ttfail "No trivial solution found"
 >          tryall ((x,ty):xs) g ctxt
 >              = do ctxt' <- ((refine (Name Free x)) >|> (fill (Name Free x))
 >                                 >|> idTac)  g ctxt
@@ -1551,7 +1551,7 @@ FIXME: This function is horrible. Redo it at some point...
 >                     fill rec g ctxt
 >   where
 >     findRec :: [RecAllowed] -> Raw -> TTM ViewTerm
->     findRec [] tm = fail "This recursive call not allowed"
+>     findRec [] tm = ttfail "This recursive call not allowed"
 >     findRec ((Rec fs nm args hyp):rs) tm =
 >         case mkRec fs nm args hyp tm of
 >            Right x -> return x
@@ -1563,7 +1563,7 @@ FIXME: This function is horrible. Redo it at some point...
 >          if (nm==tmf) then do
 >             ihargs <- getIH fs args vtmas
 >             return $ VTerm.Call nm vtmas (VTerm.apply hyp ihargs)
->           else fail "Not this one"
+>           else ttfail "Not this one"
 >     getfa (RApp f a) args = getfa f (a:args)
 >     getfa (Var x) args = (x,args)
 >     getIH fs [] [] = return []
@@ -1575,7 +1575,7 @@ FIXME: This function is horrible. Redo it at some point...
 >     getIH fs (x:xs) (y:ys)
 >         | tryvareq x y
 >              = getIH fs xs ys -- x not pi bound, but names okay.
->     getIH _ _ _ = fail "Not this one" -- Something doesn't match up.
+>     getIH _ _ _ = ttfail "Not this one" -- Something doesn't match up.
 
 >     tryvar (Name _ x) = Just x
 >     tryvar _ = Nothing
