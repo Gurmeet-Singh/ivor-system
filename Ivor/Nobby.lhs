@@ -74,6 +74,7 @@ Do the actual evaluation
 >     where bty = eval stage gamma g ty
 >  eval stage gamma g (Const x) = (MR (RdConst x))
 >  eval stage gamma g Star = MR RdStar
+>  eval stage gamma g Erased = MR RdErased
 >  eval stage gamma (VG g) (Bind n (B Lambda ty) (Sc sc)) =
 >      (MR (RdBind n (B Lambda (eval stage gamma (VG g) ty))
 >         (Kr (\w x -> eval stage gamma (VG (x:(weaken w g))) sc,Wk 0))))
@@ -238,6 +239,7 @@ Splice the escapes inside a term
 >     weakenp i (RdBind n bind sc) = RdBind n (weakenp i bind) (weakenp i sc)
 >     weakenp i (RdConst x) = RdConst x
 >     weakenp i RdStar = RdStar
+>     weakenp i RdErased = RdErased
 >     weakenp i (RCon t n sp) = RCon t n (fmap (weakenp i) sp)
 >     weakenp i (RTyCon n sp) = RTyCon n (fmap (weakenp i) sp)
 >     weakenp i (RdLabel t c) = RdLabel (weakenp i t) (weakenp i c)
@@ -292,6 +294,7 @@ Splice the escapes inside a term
 > instance Quote (Ready Kripke) (Ready Scope) where
 >     quote' ns (RdConst x) = RdConst x
 >     quote' ns RdStar = RdStar
+>     quote' ns RdErased = RdErased
 >     quote' ns (RdBind n b@(B _ ty) sc)
 >             = let n' = mkUnique n ns in
 >                        RdBind n' (quote' ns b)
@@ -387,6 +390,7 @@ Quotation to eta long normal form. DOESN'T WORK YET!
 >     forget (RdBind n b (Sc sc)) = Bind n (forget b) (Sc (forget sc))
 >     forget (RdConst x) = (Const x)
 >     forget RdStar = Star
+>     forget RdErased = Erased
 >     forget (RCon t c sp) = makeApp (Con t c (size sp)) (fmap forget sp)
 >     forget (RTyCon c sp) = makeApp (TyCon c (size sp)) (fmap forget sp)
 >     forget (RdLabel t c) = Label (forget t) (forget c)
@@ -487,7 +491,7 @@ WARNING: quotation to eta long normal form doesn't work yet.
 > instance Functor Global where
 >     fmap f (Fun opts n) = Fun opts $ fmap f n
 >     fmap f (ElimRule e) = ElimRule e
->     fmap f (DCon t i) = DCon t i
+>     fmap f (DCon t i fc) = DCon t i fc
 >     fmap f (TCon i (Elims en cn cons))
 >              = TCon i (Elims (f en) (f cn) (fmap f cons))
 

@@ -49,7 +49,8 @@
 >           in finalise (Ind res)
 
 > type SEnv = [(Name, TT Name, TT Name)]
-> type Stack = [(TT Name, SEnv, [(Name, TT Name)])]
+> type StackEntry = (TT Name, SEnv, [(Name, TT Name)])
+> type Stack = [StackEntry]
 
 > getEnv i env = (\ (_,_,val) -> val) (traceIndex env i "Evaluator fail")
 > sfst (n,_,_) = n
@@ -89,30 +90,32 @@ Code			Stack	Env	Result
 >     eval :: (Bool, Bool) -> TT Name -> Stack -> SEnv -> 
 >             [(Name, TT Name)] -> State EvalState (TT Name)
 >     eval nms@(ev,top) tm stk env pats = -- trace (show (tm, stk, env, pats)) $
->                             do eval' nms tm stk env pats
+>           {-# SCC "eval" #-} do eval' nms tm stk env pats
 >                                {- if (ev && top && null stk && tm'/=tm)
 >                                   then eval nms tm' [] env pats
 >                                   else return tm' -}
 >                                
 
 >     eval' (everything, top) (P x) xs env pats 
->         = do (mns, sts, tmp) <- get
->              let (use, mns', sts') = 
+>         = {-# SCC "evalptop" #-} do
+>              (mns, sts, tmp) <- {-# SCC "evalpget" #-} get
+>              let (use, mns', sts') = {-# SCC "evalpif" #-}
 >                      if (everything || top)
->                         then usename x jns mns (sts, (xs, pats))
+>                         then {-# SCC "usename" #-} usename x jns mns (sts, (xs, pats))
 >                         else (False, mns, sts)
->              put (mns', sts, tmp)
+>              {-# SCC "evalPput" #-} put (mns', sts, tmp)
 >              -- when (not nms) (trace ("Not using " ++ show x) (return ()))
->              case lookup x pats of
+>              case {-# SCC "evalPlookup" #-} lookup x pats of
 >                 Nothing -> if use && (everything || top)
->                                 then evalP (everything, top) x (lookupval x gam) xs env pats
->                                 else evalP (everything, top) x Nothing xs env pats
+>                                 then {-# SCC "evalptop" #-} evalP (everything, top) x (lookupval x gam) xs env pats
+>                                 else {-# SCC "evalptop" #-} evalP (everything, top) x Nothing xs env pats
 >                 Just val -> eval (everything, False) val xs env (removep x pats)
 >        where removep n [] = []
 >              removep n ((x,t):xs) | n==x = removep n xs
 >                                   | otherwise = (x,t):(removep n xs)
 >     eval' nms@(ev,_) (V i) xs env pats 
->              = if (length env>i) 
+>              = {-# SCC "evalVtoplevel" #-}
+>                if (length env>i) 
 >                   then eval nms (getEnv i env) xs env pats
 >                   else unload ev (V i) xs pats env -- blocked, so unload
 >     eval' nms (App f a) xs env pats 
@@ -120,10 +123,10 @@ Code			Stack	Env	Result
 >             eval nms f ((a, env, pats):xs) env pats
 >     eval' nms (Bind n (B Lambda ty) (Sc sc)) xs env pats
 >        = do ty' <- eval nms ty [] env pats
->             evalScope nms Lambda n ty' sc xs env pats
+>             {-# SCC "evalscope" #-} evalScope nms Lambda n ty' sc xs env pats
 >     eval' nms (Bind n (B Pi ty) (Sc sc)) xs env pats
 >        = do ty' <- eval nms ty [] env pats
->             evalScope nms Pi n ty' sc xs env pats
+>             {-# SCC "evalscope" #-} evalScope nms Pi n ty' sc xs env pats
 >            -- unload (Bind n (B Pi ty') (Sc sc)) [] pats env
 >     eval' nms (Bind n (B (Let val) ty) (Sc sc)) xs env pats 
 >        = do val' <- eval nms val [] env pats
@@ -135,10 +138,10 @@ Code			Stack	Env	Result
 >     eval' (ev,_) x stk env pats = unload ev x stk pats env
 
 >     evalP (ev, top) n (Just v) xs env pats 
->        = case v of
+>        = {-# SCC "evalP" #-} case v of
 >             Fun opts (Ind v) -> eval (ev, False) v xs env pats
 >             PatternDef p@(PMFun arity _) _ _ pc -> 
->                 do ans <- pmatchC (ev, top) n pc xs env pats
+>                 do ans <- {-# SCC "pmatchc" #-} pmatchC (ev, top) n pc xs env pats
 >                    -- ans <- pmatch (ev, top) n p xs env pats
 >                    return ans
 >             PrimOp _ f -> do xs' <- mapM (\(x, xenv, xpats) -> eval (ev, False) x [] xenv xpats) xs
@@ -146,7 +149,7 @@ Code			Stack	Env	Result
 >                                Nothing -> unload ev (P n) xs pats env
 >                                Just v -> eval (ev, False) v [] env pats
 >             _ -> unload ev (P n) xs pats env
->     evalP (ev,top) n Nothing xs env pats = unload ev (P n) xs pats env -- blocked, so unload stack
+>     evalP (ev,top) n Nothing xs env pats = {-# SCC "evalP" #-} unload ev (P n) xs pats env -- blocked, so unload stack
 
 >     evalScope nms b n ty sc stk@((x,xenv,xpats):xs) env pats 
 >              = do let n' = uniqify' n (allNames stk env pats)
@@ -166,19 +169,29 @@ Code			Stack	Env	Result
 >               u' <-  unload ev (Bind n' (B Lambda ty) (Sc sc)) [] pats env -- in Whnf
 >               return $ buildenv env u'
 >     unload ev x [] pats env 
->                = return $ foldl (\tm (n,val) -> substName n val (Sc tm)) x pats
+>                = {-# SCC "unload" #-} return $ foldl (\tm (n,val) -> substName n val (Sc tm)) x pats
 >     unload ev x ((a, aenv, apats):as) pats env 
->                = do a' <- eval (ev, False) a [] aenv apats
+>                = {-# SCC "unload" #-}
+>                  do a' <- eval (ev, False) a [] aenv apats
 >                     unload ev (App x a') as pats env
 >
->     uniqify' u@(UN n) ns = uniqify (MN (n,0)) ns
->     uniqify' n ns = uniqify n ns
+>     uniqify' u@(UN n) ns = {-# SCC "uniqify'" #-} uniqify (MN (n,0)) ns
+>     uniqify' n ns = {-# SCC "uniqify'" #-} uniqify n ns
 
 >     evalStk ev ((a, aenv, apats):as) 
->         = do a' <- eval (ev, False) a [] aenv apats
+>         = do a' <- eval (ev, True) a [] aenv apats
 >              as' <- evalStk ev as
 >              return (a':as')
 >     evalStk ev [] = return []
+
+>     evalArgs ev ((n, Left (a, aenv, apats)):as) 
+>         = do a' <- eval (ev, True) a [] aenv apats
+>              as' <- evalArgs ev as
+>              return ((n,a'):as')
+>     evalArgs ev ((n,Right a'):as) 
+>         = do as' <- evalArgs ev as
+>              return ((n,a'):as')
+>     evalArgs ev [] = return []
 
      usename x _ mns (sts, (stk, pats)) 
           | Just (static, arity) <- lookup x sts 
@@ -236,9 +249,9 @@ Code			Stack	Env	Result
 >                            unload ev (P n) xs pats env
 >              Just (rhs, pbinds, stk) -> 
 >                do rhsin <- case static of
->                     Just (Just staticargs) -> 
->                         do -- mkNewDef n staticargs xs
->                            trace ("STATIC: " ++ show (n, staticargs, (map (\(x,y,z) -> x) xs))) $ return rhs 
+>                     -- Just (Just staticargs) -> 
+>                        -- do -- mkNewDef n staticargs xs
+>                        --    trace ("STATIC: " ++ show (n, staticargs, (map (\(x,y,z) -> x) xs))) $ return rhs 
 >                     _ -> return rhs
 >                   let rhs' = bindRHS pbinds rhsin 
 >                   rhstrace (show n) rhs' []
@@ -349,56 +362,79 @@ Substitution using compiled matches
 >             = -- trace (show (n, map (\ (x,_,_) -> x) (take arity xs))) $
 >               do let stk = take (length args) xs
 >                  let rest = drop (length args) xs
->                  argvals' <- evalStk True stk
+>                  -- FIXME: make this lazy so interp fact works again!
+>                  -- then lose the annoying extra params
+>                  -- then PE might start working, and put the magic here.
+>                  argvals' <- {-# SCC "evalstk" #-} evalStk True stk
 >                  old <- get
->                  m <- pmSubst n env (zip args argvals') pc
+>                  m <- pmSubst n env (zip args (map Right argvals')) pc -- argvals') pc
 >                  case m of
->                    Just t -> eval top t rest env pats
+>                    Just t -> eval (True,True) t rest env pats
 >                    Nothing -> do put old
 >                                  unload True (P n) xs pats env
 >         | otherwise = unload True (P n) xs pats env
 
+>     substArgNames :: [(Name, Either StackEntry (TT Name))] ->
+>                      TT Name -> State EvalState (TT Name)
+>     substArgNames args e = do stk' <- evalArgs True (filter (occ e) args)
+>                               return $ substNames stk' e
+
+>     occ e (n,_) = n `elem` getNames (Sc e)
+>     right (n, Right x) = (n, x)
+>     isRight (n, Right _) = True
+>     isRight (n, Left _) = False
+
 >     pmSubst :: Name -> SEnv -> -- Name useful for debugging
->                [(Name, TT Name)] -> -- function arguments, value
+>                [(Name, Either StackEntry (TT Name))] -> -- function arguments, value
 >                TSimpleCase Name -> -- compiled match
 >                State EvalState (Maybe (TT Name))
 >     pmSubst n env args (TTm rhs) 
->         = let rhs' = substNames args rhs in
->             return $ Just rhs'
+>         = do rhs' <- {-# SCC "pmsubstnames" #-} substArgNames args rhs
+>              return $ Just rhs'
 >     pmSubst n env args TErrorCase = return $ Nothing
 >     pmSubst n env args TImpossible = return $ Nothing
 >     pmSubst n env args (TSCase scr cases)
 >         = case scr of
->             P n -> case lookup n args of
->                        Just e' -> pmSubstCases e' cases
->             e -> do e' <- eval (True, True) (substNames args e) [] env []
->                     pmSubstCases e' cases
->       where pmSubstCases e [] = return Nothing
->             pmSubstCases e (c:cs) = do t <- pmCase e c
->                                        case t of
->                                          (Just t', _) -> return (Just t')
->                                          (Nothing, False) -> pmSubstCases e cs
->                                          _ -> return Nothing
+>             P n -> do (e' , args') <- alookup [] n args
+>                       pmSubstCases e' cases args'
+>             e -> do e' <- substArgNames args e
+>                     e' <- eval (True, True) e' [] env []
+>                     pmSubstCases e' cases args
+>       where alookup acc n ((x,arg@(Left (a, aenv, apats))):args) 
+>                     | n == x = do e' <- eval (False, True) a [] aenv apats
+>                                   return (e', acc ++ (x, Right e'):args)
+>             alookup acc n ((x,Right e'):args) 
+>                     | n == x = return (e', acc ++ (x, Right e'):args)
+>             alookup acc n (a:args) = alookup (acc ++ [a]) n args
+
+>             pmSubstCases e [] args = return Nothing
+>             pmSubstCases e (c:cs) args 
+>                          = do t <- pmCase e c args
+>                               case t of
+>                                  (Just t', _) -> return (Just t')
+>                                  (Nothing, False) -> pmSubstCases e cs args
+>                                  _ -> return Nothing
 
 Matching will either succeed, fail (but not be stuck), or realise it's stuck
 
->             pmCase e (TDefault rhs) = do v <- pmSubst n env args rhs
->                                          return (v, False)
->             pmCase e (TAlt con t cargs sc)
+>             pmCase e (TDefault rhs) args = do v <- pmSubst n env args rhs
+>                                               return (v, False)
+>             pmCase e (TAlt con t cargs sc) args
 >              | Just (t', cargs') <- getConArgs e []
 >                 = if (t==t' && length cargs == length cargs')
->                      then do v <- pmSubst n env (args ++ zip cargs cargs') sc
+>                      then do v <- pmSubst n env 
+>                                     (args ++ zip cargs (map Right cargs')) sc
 >                              return (v, False)
 >                      else return (Nothing, False)
 >              | otherwise = return (Nothing, True)
->             pmCase (Const e) (TConstAlt c sc)
+>             pmCase (Const e) (TConstAlt c sc) args
 >                    = case cast e of
 >                        Just e' -> if (e'==c) 
 >                           then do v <- pmSubst n env args sc
 >                                   return (v, False)
 >                           else return (Nothing, False)
 >                        Nothing -> return (Nothing, False)
->             pmCase _ _ = return (Nothing, True)
+>             pmCase _ _ _ = return (Nothing, True)
 
 > traceIf t s x = if t then (trace s x) else x
 

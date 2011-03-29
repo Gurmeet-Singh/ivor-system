@@ -29,7 +29,7 @@ to do with it, when the time comes.
 >     | PatternDef (PMFun n) Bool Bool ([n], TSimpleCase n)
 >     | ElimRule ElimRule  -- Elimination Rule
 >     | PrimOp PrimOp EvPrim     -- Primitive function
->     | DCon Int Int       -- Data Constructor, tag and arity
+>     | DCon Int Int [Int] -- Data Constructor, tag and arity, forced args
 >     | TCon Int (Elims n) -- Type Constructor and arity, elim rule name
 >     | Unreducible        -- Unreducible name
 >     | Undefined          -- Declared but undefined name
@@ -46,7 +46,7 @@ to do with it, when the time comes.
 >     show (Fun opts t) = "Fun " ++ show t
 >     show (ElimRule _) = "<<elim rule>>"
 >     show (PrimOp _ _) = "<<primitive operator>>"
->     show (DCon x t) = "DCon " ++ show x ++ "," ++show t
+>     show (DCon x t f) = "DCon " ++ show x ++ "," ++show t ++ "," ++ show f
 >     show (TCon x (Elims e c cons)) = "TCon " ++ show x
 >     show Unreducible = "Unreducible"
 >     show Undefined = "Undefined"
@@ -103,7 +103,7 @@ occurs anywhere in its arguments).
 
 > recCon :: Name -> Gamma Name -> Bool
 > recCon n gam = case glookup n gam of
->                  (Just (DCon _ t, Ind ty)) ->
+>                  (Just (DCon _ t _, Ind ty)) ->
 >                      checkRec (conFamily ty) (map snd (getExpected ty))
 >                  _ -> False
 >    where conFamily t = fname (getFun (getReturnType t))
@@ -191,6 +191,7 @@ Model represents normal forms, including Ready (reducible) and Blocked
 >     | RTyCon Name (Spine (Model s))
 >     | forall c. Constant c => RdConst c
 >     | RdStar
+>     | RdErased
 >     | RdLabel (Model s) (MComp s)
 >     | RdCall (MComp s) (Model s)
 >     | RdReturn (Model s)
@@ -222,3 +223,28 @@ class.
 
 > type Value = Model Kripke
 > type Normal = Model Scope
+
+Erase forced arguments from an application
+
+> forced :: Gamma Name -> TT Name -> TT Name
+> forced gam x = x
+
+> {-
+> forced gam (Bind n b (Sc t)) = Bind n (forcedb b) (Sc (forced gam t))
+>   where forcedb (B (Let v) ty) = B (Let (forced gam v)) ty
+>         forcedb b = b
+> forced gam ap@(App f a) = force' f [(forced gam a)]
+>   where force' (App f a) as = force' f ((forced gam a):as)
+>         force' c@(Con _ n _) as  -- put forced args here for efficiency?
+>           = case lookupval n gam of
+>                Just (DCon _ _ fs) -> let res = appArgs c (erase fs 0 as)
+>                                          in res -- trace (show res) res
+>                _ -> ap
+>         force' _ _ = ap
+
+>         erase fs i [] = []
+>         erase fs i (x:xs)
+>               | i `elem` fs = Erased:(erase fs (i+1) xs)
+>               | otherwise = x:(erase fs (i+1) xs)
+> forced gam x = x
+> -}

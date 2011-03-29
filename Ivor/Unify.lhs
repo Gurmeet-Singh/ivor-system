@@ -129,6 +129,8 @@ Collect names which do unify, and ignore errors
 >          un envl envr (Return t) (Return t') acc = un envl envr t t' acc
 >          un envl envr (Stage x) (Stage y) acc = unst envl envr x y acc
 >          un envl envr (Meta _ _) (Meta _ _) acc = return acc
+>          un envl envr Erased _ acc = return acc
+>          un envl envr _ Erased acc = return acc
 >          un envl envr x y acc
 >                     | x == y || ignore = return acc
 >                     | otherwise = ifail $ ICantUnify (Ind x) (Ind y)

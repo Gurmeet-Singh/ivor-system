@@ -17,7 +17,7 @@ bound names to a de Bruijn index.
 >         case lookup n env of
 >           Just _ -> P n
 >           Nothing -> case glookup n gam of
->              Just ((DCon tag i), _) -> Con tag n i
+>              Just ((DCon tag i _), _) -> Con tag n i
 >              Just ((TCon i _),_) -> TyCon n i
 >              _ -> P n
 >     sc env (RApp f a) = App (sc env f) (sc env a)

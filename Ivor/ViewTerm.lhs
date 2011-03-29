@@ -229,6 +229,7 @@
 >     vtaux ctxt (Stage (TTCore.Escape tm _)) 
 >         = Ivor.ViewTerm.Escape (vtaux ctxt tm)
 >     vtaux ctxt (Meta n _) = Metavar n
+>     vtaux ctxt Erased = Placeholder
 >     vtaux _ t = error $ "Can't happen vtaux " ++ debugTT t
 
 > -- | Return whether the name occurs free in the term.

@@ -60,6 +60,7 @@ representation of the names
 >     | forall c. Constant c => Const !c
 >     | Star
 >     | Stage (Stage n)
+>     | Erased -- Forced, so deleted
 
 > data Computation n = Comp n [TT n]
 
@@ -728,6 +729,8 @@ Apply a function to a list of arguments
 >     (==) (Elim x) (Elim y) = x==y
 >     (==) (App f a) (App f' a') = f==f' && a==a'
 >     (==) (Bind _ b sc) (Bind _ b' sc') = b==b' && sc==sc'
+>     (==) Erased _ = True
+>     (==) _ Erased = True
 
 Eta equality:
 
@@ -801,7 +804,7 @@ Eta equality:
 >       fPrec _ (RConst x) = show x
 >       fPrec _ (RStar) = "*"
 >       fPrec _ (RInfer) = "_"
->       fPrec _ (RMeta n) = "?"++forget n
+>       fPrec _ (RMeta n) = "[?"++forget n++"]"
 >       fPrec p (RFileLoc f l t) = fPrec p t
 >       fPrec p (RAnnot s) = "[" ++ s ++ "]"
 >       bracket outer inner str | inner>outer = "("++str++")"
@@ -865,6 +868,7 @@ Eta equality:
 >        forgetTT (Stage t) = RStage (forget t)
 >        forgetTT (Const x) = RConst x
 >        forgetTT Star = RStar
+>        forgetTT Erased = RInfer
 
 > instance (Show n) => Forget (TT n) Raw where
 >     forget t = forgetTT (vapp showV t)
@@ -906,6 +910,7 @@ Eta equality:
 >        forgetTT (Stage t) = RStage (forget t)
 >        forgetTT (Const x) = RConst x
 >        forgetTT Star = RStar
+>        forgetTT Erased = RInfer
 
 > instance Show n => Forget (Stage n) RStage where
 >     forget (Code x) = RCode (forget x)
@@ -1001,7 +1006,7 @@ Some handy gadgets for Raw terms
 >        forgetTT (Stage (Eval t _)) = RStage (REval (forgetTT t))
 >        forgetTT (Stage (Escape t _)) = RStage (REscape (forgetTT t))
 >        forgetTT (Const x) = RConst x
->        forgetTT Star = RStar
+>        forgetTT Erased = RInfer
 
 > pToV :: Eq n => n -> (TT n) -> (Scope (TT n))
 > pToV = pToV2 0
@@ -1031,3 +1036,4 @@ Some handy gadgets for Raw terms
 > pToV2 v p (Stage t) = Sc $ Stage (sLift (getSc.(pToV2 v p)) t)
 > pToV2 v p (Const x) = Sc (Const x)
 > pToV2 v p Star = Sc Star
+> pToV2 v p Erased = Sc Erased

@@ -9,6 +9,7 @@
 > import Ivor.Values
 
 > import Debug.Trace
+> import List
 
 > data Datadecl = Datadecl {
 >                           datatycon :: Name,
@@ -83,10 +84,32 @@ the context and an executable elimination rule.
 > checkCons gamma t [] = return ([], gamma)
 > checkCons gamma t ((cn,cty):cs) = -- trace ("Checking " ++ show (cn, cty)) $
 >              do (cv,_) <- typecheck gamma cty
->		  let ccon = G (DCon t (arity gamma cv)) cv defplicit
+>		  let ccon = let fpos = forcepos cty in
+>                            G (DCon t (arity gamma cv) (forcepos cty)) cv defplicit
 >		  let gamma' = extend gamma (cn,ccon)
 >		  (rest,gamma'') <- checkCons gamma' (t+1) cs
 >	          return (((cn,ccon):rest), gamma'')
+>    where forcepos cty = let nms = nub (guardedNames [] cty) in
+>                             map (argpos 0 cty) nms
+
+>          argpos i (RBind x _ t) n 
+>                     | x == n = i
+>                     | otherwise = argpos (i+1) t n
+>          guardedNames ns (RBind n _ t) = guardedNames (n:ns) t
+>          guardedNames ns (RApp f a) = guardedApp ns f [a]
+>          guardedNames ns (Var n) | n `elem` ns = [n]
+>          guardedNames ns _ = []
+
+>          guardedApp ns (RApp f a) as = guardedApp ns f (a:as)
+>          guardedApp ns (Var n) as
+>                     | isCon n = concatMap (guardedNames ns) as
+>                     | otherwise = []
+>          isCon n = case lookupval n gamma of
+>                      Just (DCon t i _) -> True
+>                      Just (TCon _ _) -> True
+>                      _ -> False
+
+
 
 checkScheme takes a raw iota scheme and returns a scheme with a well-typed
 RHS (or fails if there is a type error).
@@ -109,7 +132,7 @@ Make a pattern from a raw term. Anything weird, just make it a "PTerm".
 
 > mkPat :: Gamma Name -> Raw -> Pattern Name
 > mkPat gam (Var n) = mkPatV n (lookupval n gam)
->        where mkPatV n (Just (DCon t x)) = PCon t n tyname []
+>        where mkPatV n (Just (DCon t x _)) = PCon t n tyname []
 >              mkPatV n (Just (TCon x _)) = PCon 0 n (UN "Type") []
 >              mkPatV n _ = PVar n
 >              tyname = case (getTyName gam n) of
@@ -123,7 +146,7 @@ Make a pattern from a raw term. Anything weird, just make it a "PTerm".
 >         pat' (RFileLoc _ _ t, as) = pat' (t, as)
 >         pat' _ = PTerm
 
->         mkPatV n (Just (DCon t x)) as = PCon t n tyname as
+>         mkPatV n (Just (DCon t x _)) as = PCon t n tyname as
 >         mkPatV n (Just (TCon x _)) as = PCon 0 n (UN "Type") as
 >         mkPatV _ _ _ = PTerm
 >         tyname = case (getTyName gam (getname (getappfun f))) of
@@ -185,7 +208,7 @@ elimination rule is a reference to this
 >          sv' (RFileLoc _ _ t) = sv' t
 
 >          mkGood x = case (lookupval x gam) of
->	       (Just (DCon t i)) -> Con t x i
+>	       (Just (DCon t i _)) -> Con t x i
 >              (Just (TCon i _)) -> TyCon x i
 >              (Just (ElimRule _)) -> Elim er
 >	       _ -> P x

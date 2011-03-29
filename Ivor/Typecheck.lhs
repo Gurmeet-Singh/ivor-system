@@ -113,7 +113,7 @@ constraints and applying it to the term and type.
 >                 Indexed Name -> Indexed Name -> 
 >                 IvorM (Indexed Name, Indexed Name)
 > doConversion raw gam constraints (Ind tm) (Ind ty) =
->      -- trace ("Finishing checking " ++ show tm ++ " with " ++ show (length constraints) ++ " equations\n" ++ showeqn (map (\x -> (True,x)) constraints)) $ 
+>     -- trace ("Finishing checking " ++ show tm ++ " with " ++ show (length constraints) ++ " equations\n" ++ showeqn (map (\x -> (True,x)) constraints)) $ 
 >           -- Unify twice; first time collect the substitutions, second
 >           -- time do them. Because we don't know what order we can solve
 >           -- constraints in and they might depend on each other...
@@ -138,11 +138,15 @@ Handy to pass through all the variables, for tracing purposes when debugging.
 >          mkSubstQ (s',nms) (ok, (env,Ind x,Ind y,fc)) all
 >             = do -- (s',nms) <- mkSubst xs
 >                  let x' = papp s' x
->                  let (Ind y') = eval_nf gam (Ind (papp s' y))
+>                  let y' = papp s' y
+>                  let (Ind y'') = -- trace ("Unifying with " ++ show x' ++ " and " ++ show (papp s' y) ++ "[" ++ show (x,y) ++ "]") $ 
+>                                 eval_nf gam (Ind (papp s' y))
 >                  uns <- case unifyenvErr ok gam env (Ind y') (Ind x') of
 >                           Right uns -> return uns
 >                           Left err -> -- trace (showeqn all) $
->                                       ifail (errCtxt fc (ICantUnify (Ind y') (Ind x')))
+>                             case unifyenvErr ok gam env (Ind y'') (Ind x') of
+>                               Right uns -> return uns
+>                               Left err -> ifail (errCtxt fc (ICantUnify (Ind y') (Ind x')))
 
                          Failure err -> fail $ err ++"\n" ++ show nms ++"\n" ++ show constraints -- $ -} ++ " Can't convert "++show x'++" and "++show y' ++ "\n" ++ show constraints ++ "\n" ++ show nms
 
@@ -239,20 +243,20 @@ Return a list of the functions we need to define to complete the definition.
 >    e <- convertAllEnv gam bs e
 >    e' <- renameB gam realNames (renameBinders e)
 >    (v1, t1) <- doConversion tm1 gam bs v1 t1
->    (v1', t1') <- fixupGam gam realNames (v1, t1)
+>    (v1'@(Ind lhsret), t1') <- fixupGam gam realNames (v1, t1)
 >    (v1''@(Ind vtm),t1'') <- doConversion tm1 gam bs v1' t1' -- (normalise gam t1') 
 >    -- Drop names out of e' that don't appear in v1'' as a result of the
 >    -- unification.
 >    let namesbound = getNames (Sc vtm)
 >    let ein = orderEnv (filter (\ (n, ty) -> n `elem` namesbound) e')
 >    ((v2,t2), (_, _, e'', bs',metas,_)) <- {- trace ("Checking " ++ show tm2 ++ " has type " ++ show t1') $ -} lvlcheck 0 inf next gam ein tm2 (Just t1')
->    (v2',t2') <- doConversion tm2 gam bs' v2 t2 -- (normalise gam t2) 
+>    (v2'@(Ind rhsret),t2') <- doConversion tm2 gam bs' v2 t2 -- (normalise gam t2) 
 >    let retEnv = reverse (ein ++ e'')
 >    if (null metas) 
->       then return (v1',t1',v2',t2',retEnv, [])
+>       then return (Ind (forced gam lhsret),t1',Ind (forced gam rhsret),t2',retEnv, [])
 >       else do let (Ind v2tt) = v2' 
 >               let (v2'', newdefs) = updateMetas v2tt
->               return (v1',t1',Ind v2'',t2',retEnv, map (\ (x,y) -> (x, (normalise gam (Ind y)))) newdefs)
+>               return (Ind (forced gam lhsret),t1',Ind (forced gam v2''),t2',retEnv, map (\ (x,y) -> (x, (normalise gam (Ind y)))) newdefs)
 
                if (null newdefs) then 
                   else trace (traceConstraints bs') $ return (v1',t1',Ind v2'',t2',e'', map (\ (x,y) -> (x, Ind y)) newdefs)
@@ -312,22 +316,23 @@ if (all (\e -> envLT x e) (y:ys))
 Do the typechecking, then unify all the inferred terms.
 
 >  tcfixupTop env lvl t exp = do
->     tm@(_,tmty) <- tc env lvl t exp
+>     tm@(Ind tmval,tmty) <- tc env lvl t exp
 >     (next, infer, bindings, errs ,mvs, fc) <- get
 >     -- First, insert inferred values into the term
->     tm'@(_,tmty) <- fixup errs tm
+>     tm'@(_, tmty') <- fixup errs tm
 >     -- Then check the resulting type matches the expected type.
 >     if infer then (case exp of
 >              Nothing -> return ()
->              Just expty -> checkConvSt env gamma tmty expty )
+>              Just expty -> checkConvSt env gamma tmty' expty )
 >       else return ()
 >     -- Then fill in any remained inferred values we got by knowing the
 >     -- expected type
 >     (next, infer, bindings, errs, mvs, fc) <- get
->     tm <- fixup errs tm
+>     tm@(Ind tmval, tmty) <- fixup errs tm
 >     -- bindings <- fixupB gamma errs bindings
 >     put (next, infer, bindings, errs, mvs, fc)
->     return tm'
+>     -- return (Ind (forced gamma tmval), tmty)
+>     return tm 
 
 >  tcfixup env lvl t exp = do
 >     tm@(_,tmty) <- tc env lvl t exp
@@ -362,7 +367,7 @@ typechecker...
 >          mkTT Nothing (Just (Undefined,t)) = return (Ind (P n), t)
 >          mkTT Nothing (Just ((ElimRule _),t)) = return (Ind (Elim n), t)
 >          mkTT Nothing (Just ((PrimOp _ _),t)) = return (Ind (P n), t)
->          mkTT Nothing (Just ((DCon tag i),t)) = return (Ind (Con tag n i), t)
+>          mkTT Nothing (Just ((DCon tag i _),t)) = return (Ind (Con tag n i), t)
 >          mkTT Nothing (Just ((TCon i _),t)) = return (Ind (TyCon n i), t)
 >          mkTT Nothing Nothing = defaultResult
 
@@ -483,7 +488,7 @@ the expected type.
 >          -- Abstract it over the environment so that we have everything
 >          -- in scope we need.
 >          tm <- abstractOver (orderEnv env) n exp []
->          {-trace (show tm ++ " : " ++ show exp) $ -}
+>          -- trace (show tm ++ " : " ++ show exp) $ 
 >          return (tm,Ind exp)
 > --              fail $ show (n, exp, bindings, env) ++ " -- Not implemented"
 >    where abstractOver [] mv exp args =

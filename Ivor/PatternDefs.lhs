@@ -224,11 +224,11 @@ Each clause may generate auxiliary definitions, so return all definitions create
 >                -- trace (show env) $
 >                -- Actually, let's try specialising elsewhere
 
->                let specrtm = Ind rtmtt' -- case spec of
+>                let specrtm = Ind (forced gam' rtmtt') -- case spec of
 >                                {- Nothing -> Ind rtmtt'
 >                                Just [] -> eval_nf gam (Ind rtmtt')
 >                                Just ns -> eval_nf_limit gam (Ind rtmtt') ns specst -}
->                return ((tm, specrtm, env), [], newdefs, True)
+>                return ((Ind (forced gam tmtt), specrtm, env), [], newdefs, True)
 >         mytypecheck gam (clause, (RWith addprf scr pats)) i =
 >             do -- Get the type of scrutinee, construct the type of the auxiliary definition
 >                (tm@(Ind clausett), clausety, _, scrty@(Ind stt), env) <- checkAndBindWith gam clause scr fn
@@ -315,9 +315,10 @@ Each clause may generate auxiliary definitions, so return all definitions create
 >         mkpat (App f a) = addPatArg (mkpat f) (mkpat a)
 >         mkpat (Con i nm ar) = mkPatV nm (lookupval nm gam)
 >         mkpat (Const c) = PConst c
+>         mkpat Erased = PTerm
 >         mkpat _ = PTerm
 
->         mkPatV n (Just (DCon t x)) = PCon t n (tyname n) []
+>         mkPatV n (Just (DCon t x _)) = PCon t n (tyname n) []
 >         mkPatV n _ = PVar n
 >         tyname n = case (getTyName gam n) of
 >                         Just x -> x
