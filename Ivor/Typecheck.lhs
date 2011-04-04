@@ -476,7 +476,7 @@ and we don't convert names to de Bruijn indices
 >                                        else bindings
 >                       put (next+1, infer, bindings', errs, mvs, fc)
 >                       return (Ind (P (inferName next)), Ind exp)
->  tc env lvl RInfer Nothing = fail "Can't infer a term for placeholder"
+>  tc env lvl RInfer Nothing = lift $ tacfail "Can't infer a term for placeholder"
 
 If we have a metavariable, we need to record the type of the expression which
 will solve it. It needs to take the environment as arguments, and return
@@ -518,7 +518,7 @@ fail $ "Don't know the expected type of " ++ show n
 >     let ttnf = normaliseEnv env gamma (Ind tt)
 >     case ttnf of
 >       (Ind Star) -> return (Ind (Stage (Code tv)), Ind Star)
->       _ -> fail $ "Type of code " ++ show t ++ " must be *"
+>       _ -> lift $ tacfail $ "Type of code " ++ show t ++ " must be *"
 >  tcStage env lvl (REval t) _ = do
 >     -- when (lvl/=0) $ fail $ "Can't eval at level " ++ show lvl
 >     (Ind tv, Ind tt) <- tc env lvl t Nothing
@@ -526,7 +526,7 @@ fail $ "Don't know the expected type of " ++ show n
 >     case ttnf of
 >        (Ind (Stage (Code tcode))) -> 
 >            return (Ind (Stage (Eval tv tt)), Ind tcode)
->        _ -> fail $ "Can't eval a non-quoted term (type " ++ show ttnf ++ ")"
+>        _ -> lift $ tacfail $ "Can't eval a non-quoted term (type " ++ show ttnf ++ ")"
 >  tcStage env lvl (REscape t) _ = do
 >     -- when (lvl==0) $ fail $ "Can't escape at level " ++ show lvl
 >     (Ind tv, Ind tt) <- tc env lvl t Nothing
@@ -534,7 +534,7 @@ fail $ "Don't know the expected type of " ++ show n
 >     case ttnf of
 >        (Ind (Stage (Code tcode))) -> 
 >            return (Ind (Stage (Escape tv tt)), Ind tcode)
->        _ -> fail "Can't escape a non-quoted term"
+>        _ -> lift $ tacfail "Can't escape a non-quoted term"
 
 >  checkComp env lvl (RComp n ts) = do
 >     tsc <- mapM (\ t -> tcfixup env lvl t Nothing) ts
@@ -561,7 +561,7 @@ Insert inferred values into the term
 >     case ttnf of
 >       (Ind Star) -> return (B Lambda tvnf)
 >       (Ind (P (MN ("INFER",_)))) -> return (B Lambda tvnf)
->       _ -> fail $ "The type of the binder " ++ show n ++ " must be *"
+>       _ -> lift $ tacfail $ "The type of the binder " ++ show n ++ " must be *"
 >  checkbinder gamma env lvl n (B Pi t) = do
 >     (Ind tv,Ind tt) <- tcfixup env lvl t (Just (Ind Star))
 >     let (Ind tvnf) = eval_nf_env env gamma (Ind tv)
@@ -586,7 +586,7 @@ Insert inferred values into the term
 >     lift $ checkConvEnv env gamma (Ind vt) (Ind tv) (INotConvertible (Ind vt) (Ind tv))
 >     case ttnf of
 >       (Ind Star) -> return (B (Let vv) tv)
->       _ -> fail $ "The type of the binder " ++ show n ++ " must be *"
+>       _ -> lift $ tacfail $ "The type of the binder " ++ show n ++ " must be *"
 >    where dbg (Ind t) = debugTT t
 
 >  checkbinder gamma env lvl n (B Hole t) = do
@@ -594,7 +594,7 @@ Insert inferred values into the term
 >     let ttnf = normaliseEnv env gamma (Ind tt)
 >     case ttnf of
 >       (Ind Star) -> return (B Hole tv)
->       _ -> fail $ "The type of the binder " ++ show n ++ " must be *"
+>       _ -> lift $ tacfail $ "The type of the binder " ++ show n ++ " must be *"
 >  checkbinder gamma env lvl n (B (Guess v) t) = do
 >     (Ind tv,Ind tt) <- tcfixup env lvl t Nothing
 >     (Ind vv,Ind vt) <- tcfixup env lvl v Nothing
@@ -602,7 +602,7 @@ Insert inferred values into the term
 >     lift $ checkConvEnv env gamma (Ind vt) (Ind tv) (INotConvertible (Ind vt) (Ind tv))
 >     case ttnf of
 >       (Ind Star) -> return (B (Guess vv) tv)
->       _ -> fail $ "The type of the binder " ++ show n ++ " must be *"
+>       _ -> lift $ tacfail $ "The type of the binder " ++ show n ++ " must be *"
 
 >  checkpatt gamma env lvl n RInfer t = do
 >     (Ind tv,Ind tt) <- tcfixup env lvl t Nothing
@@ -619,7 +619,7 @@ Insert inferred values into the term
 >     --   show patt ++ " and " ++ show tv ++ " are not convertible"
 >     case ttnf of
 >       (Ind Star) -> return ((B (Pattern patv) tv), bindings++env)
->       _ -> fail $ "The type of the binder " ++ show n ++ " must be *"
+>       _ -> lift $ tacfail $ "The type of the binder " ++ show n ++ " must be *"
 
 Check a raw term representing a pattern. Return the pattern, and the 
 extended environment.

@@ -47,6 +47,23 @@ this. Let's just make it work first...)
 >                            (Cons cons):(partition ctxt rest)
 > partition ctxt x = error "Can't happen PMComp partition"
 
+Make sure the variables bound have proper pattern names (to avoid embarrassing
+clashes)
+
+> pnames :: [Name] -> TSimpleCase Name -> TSimpleCase Name
+> pnames ns (TSCase tm alts) = TSCase (pnamestm ns tm) (map (pnamesalt ns) alts)
+> pnames ns (TTm tm) = TTm (pnamestm ns tm)
+> pnames ns x = x
+
+> pnamestm :: [Name] -> TT Name -> TT Name
+> pnamestm [] tm = tm
+> pnamestm (x:xs) tm = substName x (P (PN x)) (Sc (pnamestm xs tm))
+
+> pnamesalt ns (TAlt c t args sc) 
+>     = TAlt c t (map PN args) (pnames (ns++args) sc)
+> pnamesalt ns (TConstAlt c sc) = TConstAlt c (pnames ns sc)
+> pnamesalt ns (TDefault sc) = TDefault (pnames ns sc)
+
 > doCaseComp :: Gamma Name ->
 >               [Clause] -> State CS ([Name], TSimpleCase Name)
 > doCaseComp ctxt cs = do vs <- newVars cs

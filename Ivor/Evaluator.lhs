@@ -2,7 +2,7 @@
 
 > module Ivor.Evaluator(eval_whnf, eval_nf, eval_nf_env,
 >                       eval_nf_without, eval_nf_limit,
->                       eval_nfEnv, tidyNames) where
+>                       tidyNames) where
 
 > import Ivor.TTCore
 > import Ivor.Gadgets
@@ -26,6 +26,8 @@
 > eval_nf :: Gamma Name -> Indexed Name -> Indexed Name
 > eval_nf gam (Ind tm) = let res = makePs (evaluate True gam tm Nothing Nothing Nothing)
 >                            in finalise (Ind res)
+
+ eval_nf gam (Ind tm) = Ind (evaluate True gam tm Nothing Nothing Nothing)
 
 > eval_nf_env :: Env Name -> Gamma Name -> Indexed Name -> Indexed Name
 > eval_nf_env env g t
@@ -163,6 +165,7 @@ Code			Stack	Env	Result
 >                   sc' <- eval nms sc [] ((n',ty,P tmpname):env) pats
 >                   let newsc = pToV tmpname sc'
 >                   u' <- unload ev (Bind n' (B b ty) newsc) [] pats env
+>                   --trace ("SCOPE: " ++ show (sc, newsc, env, debugTT u', debugTT (buildenv env u'))) $ 
 >                   return $ buildenv env u'
 >       | otherwise 
 >          = do let n' = uniqify' n (allNames [] env pats)

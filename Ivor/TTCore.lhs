@@ -148,7 +148,7 @@ fallthrough when a function is known to be total, and ErrorCase otherwise.
 >                    | TTm (TT n)
 >                    | TErrorCase
 >                    | TImpossible
->   deriving Eq
+>   deriving (Show, Eq)
 
 > data TCaseAlt n = TAlt n Int [n] (TSimpleCase n)
 >                 | forall c. Constant c => TConstAlt c (TSimpleCase n)
@@ -174,6 +174,11 @@ a pain...
 >   (==) (TConstAlt _ _) (TAlt _ _ _ _) = False
 >   (==) (TConstAlt _ _) (TDefault _) = False
 >   (==) (TDefault _) _ = False
+
+> instance Show n => Show (TCaseAlt n) where
+>   show (TAlt c t ns sc) = "Case " ++ show c ++ " " ++ show ns ++ " " ++ show sc
+>   show (TConstAlt c sc) = "Constant " ++ show sc
+>   show (TDefault sc) = "Default " ++ show sc
 
 UN covers names defined by users, MN covers names invented by the system.
 This keeps both namespaces separate.
@@ -1007,6 +1012,7 @@ Some handy gadgets for Raw terms
 >        forgetTT (Stage (Escape t _)) = RStage (REscape (forgetTT t))
 >        forgetTT (Const x) = RConst x
 >        forgetTT Erased = RInfer
+>        forgetTT x = RInfer
 
 > pToV :: Eq n => n -> (TT n) -> (Scope (TT n))
 > pToV = pToV2 0
