@@ -191,6 +191,7 @@ Model represents normal forms, including Ready (reducible) and Blocked
 >     | RTyCon Name (Spine (Model s))
 >     | forall c. Constant c => RdConst c
 >     | RdStar
+>     | RdLinStar
 >     | RdErased
 >     | RdLabel (Model s) (MComp s)
 >     | RdCall (MComp s) (Model s)

@@ -77,6 +77,7 @@
 >     | Return { returnterm :: ViewTerm }
 >     | forall c. Constant c => Constant c
 >     | Star
+>     | LinStar
 >     | Quote { quotedterm :: ViewTerm } -- ^ Staging annotation
 >     | Code { codetype :: ViewTerm } -- ^ Staging annotation
 >     | Eval { evalterm :: ViewTerm } -- ^ Staging annotation
@@ -114,6 +115,7 @@
 >     (==) (Ivor.ViewTerm.Call _ _ t) (Ivor.ViewTerm.Call _ _ t') = t == t'
 >     (==) (Ivor.ViewTerm.Return t) (Ivor.ViewTerm.Return t') = t==t'
 >     (==) Ivor.ViewTerm.Star Ivor.ViewTerm.Star = True
+>     (==) Ivor.ViewTerm.LinStar Ivor.ViewTerm.LinStar = True
 >     (==) Placeholder Placeholder = True
 >     (==) (Metavar x) (Metavar y) = x == y
 >     (==) (Constant x) (Constant y) = case cast x of
@@ -163,6 +165,7 @@
 >     forget (Ivor.ViewTerm.Return ty) = RReturn (forget ty)
 >     forget (Constant c) = RConst c
 >     forget (Ivor.ViewTerm.Star) = TTCore.RStar
+>     forget (Ivor.ViewTerm.LinStar) = TTCore.RLinStar
 >     forget Placeholder = RInfer
 >     forget (Metavar x) = RMeta x
 >     forget (Ivor.ViewTerm.Quote t) = RStage (RQuote (forget t))
@@ -215,6 +218,7 @@
 >         Ivor.ViewTerm.Let n (vtaux ctxt ty) (vtaux ctxt val) (vtaux (n:ctxt) sc)
 >     vtaux ctxt (Const c) = Constant c
 >     vtaux ctxt TTCore.Star = Ivor.ViewTerm.Star
+>     vtaux ctxt TTCore.LinStar = Ivor.ViewTerm.LinStar
 >     vtaux ctxt (TTCore.Label ty (Comp n ts)) =
 >         Ivor.ViewTerm.Label n (fmap (vtaux ctxt) ts) (vtaux ctxt ty)
 >     vtaux ctxt (TTCore.Call (Comp n ts) ty) =

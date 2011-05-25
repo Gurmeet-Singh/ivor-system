@@ -416,6 +416,7 @@ typechecker...
 >                         return (rv,rt)
 >  tc env lvl (RConst x) _ = lift $ tcConst x
 >  tc env lvl RStar _ = return (Ind Star, Ind Star)
+>  tc env lvl RLinStar _ = return (Ind LinStar, Ind Star)
 >  tc env lvl (RFileLoc f l t) exp = 
 >     do (next, infer, bindings, errs, mvs, fc) <- get
 >        put (next, infer, bindings, errs, mvs, Just (FC f l))
@@ -567,13 +568,14 @@ Insert inferred values into the term
 >     let (Ind tvnf) = eval_nf_env env gamma (Ind tv)
 >     let ttnf = -- trace ("PI: " ++ show (tv, tvnf, debugTT tv)) $ 
 >                eval_nf_env env gamma (Ind tt)
->     checkConvSt env gamma ttnf (Ind Star)
+>     -- checkConvSt env gamma ttnf (Ind AnyKind)
+>     case ttnf of
+>       (Ind Star) -> return (B Pi tv)
+>       (Ind LinStar) -> return (B Pi tv)
+>       (Ind (P (MN ("INFER",_)))) -> return (B Pi tv)
+>       _ -> fail $ "The type of the binder " ++ show n ++ " must be *"
 >     return (B Pi tvnf)
 
-     case ttnf of
-       (Ind Star) -> return (B Pi tv)
-       (Ind (P (MN ("INFER",_)))) -> return (B Pi tv)
-       _ -> fail $ "The type of the binder " ++ show n ++ " must be *"
 
 >  checkbinder gamma env lvl n (B (Let v) RInfer) = do
 >     (Ind vv,Ind vt) <- tcfixup env lvl v Nothing
@@ -710,7 +712,10 @@ extended environment.
 >    let lv = Bind n (B Lambda t) scv
 >    return (Ind lv,Ind lt)
 > discharge gamma n (B Pi t) scv (Sc sct) = do
->    checkConvSt [] gamma (Ind Star) (Ind sct)
+>    case sct of
+>      Star -> return ()
+>      LinStar -> return ()
+>      _ -> checkConvSt [] gamma (Ind Star) (Ind sct)
 >    let lt = Star
 >    let lv = Bind n (B Pi t) scv
 >    return (Ind lv,Ind lt)

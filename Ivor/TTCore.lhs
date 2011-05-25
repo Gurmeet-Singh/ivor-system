@@ -22,6 +22,7 @@ Raw terms are those read in directly from the user, and may be badly typed.
 >     | RBind Name (Binder Raw) Raw
 >     | forall c.(Constant c) => RConst !c
 >     | RStar
+>     | RLinStar
 >     | RInfer -- Term to be inferred by the typechecker
 >     | RMeta Name -- a metavariable, to be implemented separately
 >     | RLabel Raw RComputation
@@ -30,6 +31,8 @@ Raw terms are those read in directly from the user, and may be badly typed.
 >     | RAnnot String -- Debugging hack
 >     | RFileLoc FilePath Int Raw -- For more helpful type error messages
 >     | RStage RStage
+>     | RLin Raw -- linear value
+>     | RLinTy Raw -- linear type
 
 > data RComputation = RComp Name [Raw]
 >   deriving Eq
@@ -59,6 +62,9 @@ representation of the names
 >     | Return (TT n)
 >     | forall c. Constant c => Const !c
 >     | Star
+>     | LinStar
+>     | Lin (TT n)
+>     | LinTy (TT n)
 >     | Stage (Stage n)
 >     | Erased -- Forced, so deleted
 
@@ -86,6 +92,7 @@ Constants
 > data Bind n
 >     = Lambda
 >     | Pi
+>     | LinPi
 >     | Let n
 >     | Hole
 >     | Guess n
@@ -257,7 +264,10 @@ is dealt with later.
 >     fmap f (Call c t) = Call (fmap f c) (fmap f t)
 >     fmap f (Return t) = Return (fmap f t)
 >     fmap f (Stage t) = Stage (fmap f t)
+>     fmap f (Lin t) = Lin (fmap f t)
+>     fmap f (LinTy t) = LinTy (fmap f t)
 >     fmap f Star = Star
+>     fmap f LinStar = LinStar
 
 > instance Functor Stage where
 >     fmap f (Quote t) = Quote (fmap f t)
@@ -319,6 +329,8 @@ Each V is processed with a function taking the context and the index.
 >         = Call (Comp n (fmap (v' ctx) cs)) (v' ctx t)
 >     v' ctx (Return t) = Return (v' ctx t)
 >     v' ctx (Stage t) = Stage (sLift (v' ctx) t)
+>     v' ctx (Lin t) = Lin (v' ctx t)
+>     v' ctx (LinTy t) = LinTy (v' ctx t)
 >     v' ctx x = x
 
 > indexise :: Levelled n -> Indexed n
@@ -345,6 +357,8 @@ Same, but for Ps
 >         = Call (Comp n (fmap (v') cs)) (v' t)
 >     v' (Return t) = Return (v' t)
 >     v' (Stage t) = Stage (sLift (v') t)
+>     v' (Lin t) = Lin (v' t)
+>     v' (LinTy t) = LinTy (v' t)
 >     v' x = x
 
 FIXME: This needs to rename all duplicated binder names first, otherwise
@@ -397,6 +411,12 @@ we get a duff term when we go back to the indexed version.
 > uniqifyAllState (Stage t) =
 >     do t' <- sLiftM uniqifyAllState t
 >        return (Stage t')
+> uniqifyAllState (Lin t) =
+>     do t' <- uniqifyAllState t
+>        return (Lin t')
+> uniqifyAllState (LinTy t) =
+>     do t' <- uniqifyAllState t
+>        return (LinTy t')
 > uniqifyAllState x = return $ x
 
 > uniqifyAllStateB (B Lambda ty) =
@@ -405,6 +425,9 @@ we get a duff term when we go back to the indexed version.
 > uniqifyAllStateB (B Pi ty) =
 >     do ty' <- uniqifyAllState ty
 >        return (B Pi ty')
+> uniqifyAllStateB (B LinPi ty) =
+>     do ty' <- uniqifyAllState ty
+>        return (B LinPi ty')
 > uniqifyAllStateB (B Hole ty) =
 >     do ty' <- uniqifyAllState ty
 >        return (B Hole ty')
@@ -714,6 +737,7 @@ Apply a function to a list of arguments
 >                                    Just x' -> x'==y
 >                                    Nothing -> False
 >     (==) RStar RStar = True
+>     (==) RLinStar RLinStar = True
 >     (==) (RLabel t (RComp n cs)) (RLabel t' (RComp n' cs')) =
 >         t==t' && n==n' && cs == cs'
 >     (==) (RCall (RComp n cs) t) (RCall (RComp n' cs') t') =
@@ -747,6 +771,7 @@ Eta equality:
 >                                   Just x' -> x'==y
 >                                   Nothing -> False
 >     (==) Star Star = True
+>     (==) LinStar LinStar = True
 >     (==) (Label t (Comp n cs)) (Label t' (Comp n' cs')) =
 >         t==t' -- && n==n' && cs == cs'
 >     (==) (Call (Comp n cs) t) (Call (Comp n' cs') t') =
@@ -808,6 +833,7 @@ Eta equality:
 >       fPrec _ (RStage (REscape t)) = "~" ++ fPrec 0 t
 >       fPrec _ (RConst x) = show x
 >       fPrec _ (RStar) = "*"
+>       fPrec _ (RLinStar) = "!*"
 >       fPrec _ (RInfer) = "_"
 >       fPrec _ (RMeta n) = "[?"++forget n++"]"
 >       fPrec p (RFileLoc f l t) = fPrec p t
@@ -873,6 +899,7 @@ Eta equality:
 >        forgetTT (Stage t) = RStage (forget t)
 >        forgetTT (Const x) = RConst x
 >        forgetTT Star = RStar
+>        forgetTT LinStar = RLinStar
 >        forgetTT Erased = RInfer
 
 > instance (Show n) => Forget (TT n) Raw where
@@ -915,6 +942,7 @@ Eta equality:
 >        forgetTT (Stage t) = RStage (forget t)
 >        forgetTT (Const x) = RConst x
 >        forgetTT Star = RStar
+>        forgetTT LinStar = RLinStar
 >        forgetTT Erased = RInfer
 
 > instance Show n => Forget (Stage n) RStage where
@@ -1042,4 +1070,5 @@ Some handy gadgets for Raw terms
 > pToV2 v p (Stage t) = Sc $ Stage (sLift (getSc.(pToV2 v p)) t)
 > pToV2 v p (Const x) = Sc (Const x)
 > pToV2 v p Star = Sc Star
+> pToV2 v p LinStar = Sc LinStar
 > pToV2 v p Erased = Sc Erased
