@@ -104,6 +104,9 @@ Collect names which do unify, and ignore errors
 >          un envl envr t (Bind x b@(B (Let v) ty) (Sc sc)) acc
 >             = un envl ((x,b):envr) t sc acc
 >                 -- combine bu scu
+>          un envl envr x@(App (P f) s) y@(App (P f') s') acc
+>                     | x == y && not ignore = return acc
+>                     | x /=y && not ignore = ifail $ ICantUnify (Ind x) (Ind y)
 >          -- if unifying the functions fails because the names are different,
 >          -- unifying the arguments is going to be a waste of time bec
 >          un envl envr x@(App f s) y@(App f' s') acc
