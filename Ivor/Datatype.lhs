@@ -9,7 +9,7 @@
 > import Ivor.Values
 
 > import Debug.Trace
-> import List
+> import Data.List
 
 > data Datadecl = Datadecl {
 >                           datatycon :: Name,

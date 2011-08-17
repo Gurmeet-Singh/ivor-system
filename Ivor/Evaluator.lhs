@@ -12,7 +12,7 @@
 > import Debug.Trace
 > import Data.Typeable
 > import Control.Monad.State
-> import List
+> import Data.List
 > import qualified Data.Map as Map
 
  data Machine = Machine { term :: (TT Name),

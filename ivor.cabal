@@ -7,7 +7,7 @@ Author:		Edwin Brady
 Maintainer:	Edwin Brady <eb@dcs.st-and.ac.uk>
 Homepage:	http://www.dcs.st-and.ac.uk/~eb/Ivor/
 Stability:      experimental
-Build-depends:	base, haskell98, parsec, mtl, directory, containers
+-- Build-depends:	base, haskell98, parsec, mtl, directory, containers
 Extensions:	MultiParamTypeClasses, FunctionalDependencies,
 		ExistentialQuantification, OverlappingInstances
 Category:       Theorem provers, Dependent Types
@@ -59,12 +59,12 @@ Extra-source-files: emacs/ivor-mode.el, examplett/staged.tt, examplett/test.c, e
 
 
 
-Build-depends:  base >=3 && <5, parsec, mtl, directory, binary
+Build-depends:  base >=3 && <5, parsec, mtl, directory, binary, containers
 Build-type:     Simple
 
 Extensions:     MultiParamTypeClasses, FunctionalDependencies,
                 ExistentialQuantification, OverlappingInstances,
-                TypeSynonymInstances, PatternGuards
+                TypeSynonymInstances, FlexibleInstances, PatternGuards
 -- Needs some -Wall cleanup
 -- GHC-options:    -Wall
 

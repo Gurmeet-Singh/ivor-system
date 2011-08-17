@@ -12,7 +12,7 @@ this. Let's just make it work first...)
 > import Data.Typeable
 > import Debug.Trace
 > import Control.Monad.State
-> import List hiding (partition)
+> import Data.List hiding (partition)
 
 > data CS = CS Int
 

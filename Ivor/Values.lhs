@@ -11,7 +11,7 @@ FIXME: Most of this stuff and Ivor.Nobby have GOT TO GO!!!
 > import Debug.Trace
 > import Data.Typeable
 > import Control.Monad.State
-> import List
+> import Data.List
 > import qualified Data.Map as Map
 
 To begin, we need to define the context in which normalisation takes place.
