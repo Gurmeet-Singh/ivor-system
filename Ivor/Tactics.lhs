@@ -360,6 +360,8 @@ names. Let's record which ones...
 >         mkns (UN a) (UN b) = UN (a++"_"++b)
 >         mkns (MN (a,i)) (UN b) = MN (a++"_"++b, i)
 >         mkns (MN (a,i)) (MN (b,j)) = MN (a++"_"++b, i)
+>         mkns (UN b) (MN (a,i)) = MN (b++"_"++a, i)
+>         mkns x y = error $ "FAIL: " ++ show (x,y)
 
 > doClaims :: Name -> [((Name, TT Name), Maybe (TT Name))] -> Tactic
 > doClaims h [] gam env tm = tacret $ tm
