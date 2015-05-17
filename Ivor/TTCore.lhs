@@ -147,8 +147,8 @@ Pattern represents the patterns used to define iota schemes.
 >     compare (PCon x _ _ _) (PCon y _ _ _) = compare x y
 >     compare _ _ = EQ -- Don't care!
 
-Simple case statements are either a case analysis, just a term. ErrorCase 
-and Impossible are distinct in that 'Impossible' should be the default 
+Simple case statements are either a case analysis, just a term. ErrorCase
+and Impossible are distinct in that 'Impossible' should be the default
 fallthrough when a function is known to be total, and ErrorCase otherwise.
 
 > data TSimpleCase n = TSCase (TT n) [TCaseAlt n]
@@ -366,19 +366,19 @@ we get a duff term when we go back to the indexed version.
 
 > makePs :: TT Name -> TT Name
 > makePs t = let t' = evalState (uniqifyAllState t) [] in
->                 vapp (\ (ctx,i) -> P (traceIndex ctx i ("makePs " ++ 
+>                 vapp (\ (ctx,i) -> P (traceIndex ctx i ("makePs " ++
 >                                                         debugTT t))) t'
 >                            --if (i<length ctx) then P (ctx!!i)
 >                              --           else V i) t'
 
 > makePsUniq :: TT Name -> TT Name
-> makePsUniq t = vapp (\ (ctx,i) -> P (traceIndex ctx i ("makePs " ++ 
+> makePsUniq t = vapp (\ (ctx,i) -> P (traceIndex ctx i ("makePs " ++
 >                                                        debugTT t))) t
 >                            --if (i<length ctx) then P (ctx!!i)
 >                              --           else V i) t'
 
 > makePsEnv env t = let t' = evalState (uniqifyAllState t) env in
->                       vapp (\ (ctx,i) -> P (traceIndex ctx i 
+>                       vapp (\ (ctx,i) -> P (traceIndex ctx i
 >                                             ("makePsEnv" ++ debugTT t))) t'
 
 
@@ -539,7 +539,7 @@ a complete definition.
 >                               mvs <- get
 >                               put $ nub ((n,ty'):mvs)
 >                               return (P n)
->          ums (Bind n (B b ty) (Sc sc)) 
+>          ums (Bind n (B b ty) (Sc sc))
 >                  = do b' <- umsB b
 >                       ty' <- ums ty
 >                       sc' <- ums sc
@@ -1061,7 +1061,7 @@ Some handy gadgets for Raw terms
 >				where getSc (Sc a) = a
 > pToV2 v p (Label t (Comp n ts)) = Sc $ Label (getSc (pToV2 v p t))
 >                                         (Comp n (map (getSc.(pToV2 v p)) ts))
-> pToV2 v p (Call (Comp n ts) t) = Sc $ Call 
+> pToV2 v p (Call (Comp n ts) t) = Sc $ Call
 >                                        (Comp n (map (getSc.(pToV2 v p)) ts))
 >                                        (getSc (pToV2 v p t))
 > pToV2 v p (Return t) = Sc $ Return (getSc (pToV2 v p t))

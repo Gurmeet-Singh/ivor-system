@@ -3,5 +3,3 @@
 > module Ivor.Constant where
 
 > import Data.Typeable
-
-

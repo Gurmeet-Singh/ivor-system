@@ -12,4 +12,3 @@ Match weaken : (n:_)(i:Fin n)->(Fin (S n)) =
 Match fin2Nat : (n:_)(i:Fin n)->Nat =
     fin2Nat _ (fz _) = O
   | fin2Nat _ (fs _ i) = S (fin2Nat _ i);
-

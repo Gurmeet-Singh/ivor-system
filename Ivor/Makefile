@@ -20,9 +20,9 @@ SRCS = Parser.hs Nobby.lhs TTCore.lhs Gadgets.lhs State.lhs \
        Grouper.lhs SC.lhs Bytecode.lhs CodegenC.lhs Tactics.lhs \
        Display.lhs Unify.lhs MakeData.lhs TT.lhs
 
-all: ${TARGET} 
+all: ${TARGET}
 
-${TARGET}: 
+${TARGET}:
 	${GHC} --make ${OPTS} Main.lhs -o ${TARGET}
 #	${GHC} ${OPTS} ${OBJS} -o ${TARGET}
 

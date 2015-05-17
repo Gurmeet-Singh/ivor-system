@@ -1,6 +1,6 @@
 Facilities for handling overloading. This is currently a bodge - terms
 contain 'ROpts' which are variables which could be one of several things.
-We convert such terms to a list of terms which contain all the possible 
+We convert such terms to a list of terms which contain all the possible
 combinations of 'Var', typecheck them all, and if only one succeeds, that's
 the right overloading. If more than one succeeds, there is an ambiguous name.
 

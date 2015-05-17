@@ -22,7 +22,7 @@ and their types, as well as any other names which need
 to be defined to complete the definition.
 Also return whether the function is definitely total.
 
-> checkDef :: Gamma Name -> Name -> Raw -> [PMRaw] -> 
+> checkDef :: Gamma Name -> Name -> Raw -> [PMRaw] ->
 >             Bool -> -- Check for coverage
 >             Bool -> -- Check for well-foundedness
 >             Maybe [(Name, Int)] -> -- Names to specialise
@@ -41,7 +41,7 @@ Also return whether the function is definitely total.
 >   gam' <- gInsert fn (G Undefined ty defplicit) gam
 >   clauses' <- validClauses gam' fn ty clauses'
 >   (pmdefs, newdefs, covers) <- matchClauses gam' fn pats tyin ty cover clauses' spec specst
->   wf <- return True 
+>   wf <- return True
 >         {- if wellfounded then
 >             do checkWellFounded gam fn [0..arity-1] pmdef
 >                return True
@@ -180,16 +180,16 @@ names bound in patterns) then type check the right hand side.
 
 Each clause may generate auxiliary definitions, so return all definitions created.
 
-> matchClauses :: Gamma Name -> Name -> [PMRaw] -> Raw -> Indexed Name -> 
+> matchClauses :: Gamma Name -> Name -> [PMRaw] -> Raw -> Indexed Name ->
 >                 Bool -> -- Check coverage
->                 [(Indexed Name, Indexed Name)] -> 
+>                 [(Indexed Name, Indexed Name)] ->
 >                 Maybe [(Name, Int)] ->
 >                 Maybe [(Name, ([Int], Int))] ->
 >                 IvorM ([(Name, PMFun Name, Indexed Name)], [(Name, Indexed Name)], Bool)
 > matchClauses gam fn pats tyin ty@(Ind ty') cover gen spec specst = do
 >    let raws = zip (map mkRaw pats) (map getRet pats)
 >    (checkpats, newdefs, aux, covers) <- mytypechecks gam raws [] [] [] True
->    cv <- if cover then 
+>    cv <- if cover then
 >              do checkCoverage (map fst checkpats) (map fst gen)
 >                 return True
 >              else case checkCoverage (map fst checkpats) (map fst gen) of
@@ -210,7 +210,7 @@ Each clause may generate auxiliary definitions, so return all definitions create
 >         mytypechecks gam (c:cs) acc defs auxdefs cov =
 >             do ((cl, cr, _), newdefs, aux', covd) <- mytypecheck gam c (length cs)
 >                mytypechecks gam cs ((cl,cr):acc) (defs++newdefs) (auxdefs++aux') (cov && covd)
->         mytypecheck gam (clause, (RWRet ret)) i = 
+>         mytypecheck gam (clause, (RWRet ret)) i =
 >             do (tm@(Ind tmtt), pty,
 >                 rtm@(Ind rtmtt), rty, env, newdefs) <- checkAndBindPair gam clause ret
 >                unified <- unifyenv gam env pty rty
@@ -248,8 +248,8 @@ Each clause may generate auxiliary definitions, so return all definitions create
 >                let newname = mkNewName fn i
 >                -- TODO: All pats have to match against args ++ [_]
 >                -- Final clause returns newname applied to args++scrutinee++refl
->                let ret = rawApp (Var newname) ((map Var (map fst newargs)) ++ 
->                              [scr] ++ if addprf then 
+>                let ret = rawApp (Var newname) ((map Var (map fst newargs)) ++
+>                              [scr] ++ if addprf then
 >                                           [RApp (RApp (Var (UN "refl")) RInfer) RInfer]
 >                                          else [])
 >                let gam' = insertGam newname (G Undefined newfnTy defplicit) gam
@@ -258,10 +258,10 @@ Each clause may generate auxiliary definitions, so return all definitions create
 >                (auxdefs', newdefs, covers) <- checkDef gam' newname (forget newfnTy) newpdef False cover spec specst
 >                return (chk, auxdefs++auxdefs', newdefs, covers)
 
->         addLastArg (RBind n (B Pi arg) x) ty scr addprf 
+>         addLastArg (RBind n (B Pi arg) x) ty scr addprf
 >                        = RBind n (B Pi arg) (addLastArg x ty scr addprf)
->         addLastArg x ty scr addprf 
->            = RBind (UN "__scr") (B Pi ty) 
+>         addLastArg x ty scr addprf
+>            = RBind (UN "__scr") (B Pi ty)
 >                 (if addprf then (RBind (UN "__scrEq") (B Pi (screq (UN "__scr") scr)) x)
 >                     else x)
 
@@ -286,7 +286,7 @@ Each clause may generate auxiliary definitions, so return all definitions create
 >             ret' <- newpRet ret
 >             return $ RSch ((getAuxPats (map fst newargs) newps)++(lastn i args) ++
 >                              (if addprf then [RInfer] else [])) ret'
->                 where newpRet (RWith prf v schs) = 
+>                 where newpRet (RWith prf v schs) =
 >                          do newpats <- mapM (getNewPat proto (i+1)) schs
 >                             newpdef <- mapM (newp proto newargs (i+1) prf) (zip newpats schs)
 >                             return (RWith prf v newpdef)
@@ -487,7 +487,7 @@ anything or just variables)
 Convert human names in pattern definitions to machine names (to avoid
 ambiguities when running)
 
-FIXME: This is really just an almighty hack until patterns are represented 
+FIXME: This is really just an almighty hack until patterns are represented
 better in terms.
 
 > mangleVars :: [(Name, PMFun Name, Indexed Name)] ->
@@ -502,14 +502,14 @@ better in terms.
 >      = let (ps', vars) = collectVars ([], []) ps in
 >            Sch ps' env (Ind (renameRHS vars rhs))
 >    where renameRHS [] rhs = rhs
->          renameRHS (x:xs) rhs 
+>          renameRHS (x:xs) rhs
 >             = renameRHS xs $ substName x (P (newN x)) (Sc rhs)
 
 >          newN x = PN x -- MN (x,42)
 >          -- newN (MN (x, i)) = MN (x, i+42)
 
 >          collectVars acc [] = acc
->          collectVars (aps, avars) (p:ps) 
+>          collectVars (aps, avars) (p:ps)
 >                          = let (p', vars) = collectPat p in
 >                                collectVars (aps++[p'], nub (avars++vars)) ps
 
@@ -518,4 +518,3 @@ better in terms.
 >              let (ps', vars') = collectVars ([],[]) ps in
 >                  (PCon a tag ty ps', vars')
 >          collectPat x = (x, [])
-                                                         

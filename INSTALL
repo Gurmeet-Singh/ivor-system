@@ -1,5 +1,5 @@
 Requirements:
-   GHC version >= 6.4, 
+   GHC version >= 6.4,
    happy
 
 To build and install:

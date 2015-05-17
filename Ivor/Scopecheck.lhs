@@ -7,7 +7,7 @@
 > import Ivor.Typecheck
 > import Ivor.Values
 
-Typechecking on terms we assume to be okay - in other words, just convert 
+Typechecking on terms we assume to be okay - in other words, just convert
 bound names to a de Bruijn index.
 
 > scopeCheck :: Gamma Name -> Env Name -> Raw -> TT Name
@@ -31,23 +31,21 @@ bound names to a de Bruijn index.
 >     sc env t = error $ "Can't fastcheck " ++ show t
 
 >     scBinder :: Env Name -> Binder Raw -> Binder (TT Name)
->     scBinder env (B (Let v) t) 
+>     scBinder env (B (Let v) t)
 >                = let v' = sc env v
 >                      t' = sc env t in
 >                      B (Let v') t'
->     scBinder env (B Lambda t) 
+>     scBinder env (B Lambda t)
 >                = let t' = sc env t in
 >                      B Lambda t'
->     scBinder env (B Pi t) 
+>     scBinder env (B Pi t)
 >                = let t' = sc env t in
 >                      B Pi t'
->     scBinder env (B (Guess v) t) 
+>     scBinder env (B (Guess v) t)
 >                  = error "Can't fastcheck a term with guesses"
->     scBinder env (B (Pattern v) t) 
+>     scBinder env (B (Pattern v) t)
 >                  = error "Can't fastcheck a term with patterns"
->     scBinder env (B MatchAny t) 
+>     scBinder env (B MatchAny t)
 >                  = error "Can't fastcheck a term with patterns"
->     scBinder env (B Hole t) 
+>     scBinder env (B Hole t)
 >                  = error "Can't fastcheck a term with holes"
-
-

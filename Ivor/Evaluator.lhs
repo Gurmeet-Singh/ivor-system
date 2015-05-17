@@ -42,10 +42,10 @@
 > eval_nf_without gam (Ind tm) ns = let res = makePs (evaluate True gam tm (Just ns) Nothing Nothing)
 >                                       in finalise (Ind res)
 
-> eval_nf_limit :: Gamma Name -> Indexed Name -> [(Name, Int)] -> 
+> eval_nf_limit :: Gamma Name -> Indexed Name -> [(Name, Int)] ->
 >                  Maybe [(Name, ([Int], Int))] -> Indexed Name
 > eval_nf_limit gam tm [] stat = eval_nf gam tm
-> eval_nf_limit gam (Ind tm) ns stat 
+> eval_nf_limit gam (Ind tm) ns stat
 >     = -- trace (show (tm, stat)) $
 >       let res = makePs (evaluate True gam tm Nothing (Just ns) stat)
 >           in finalise (Ind res)
@@ -74,31 +74,31 @@ Code			Stack	Env	Result
 (or leave alone for whnf)
 [[let x = t in e]]	xs	es	[[e]], xs, (Let x t: es)
 
-> type EvalState = (Maybe [(Name, Int)], 
+> type EvalState = (Maybe [(Name, Int)],
 >                   Maybe [(Name, ([Int], Int))],
 >                   Int)
 
 > evaluate :: Bool -> -- under binders? 'False' gives WHNF
->             Gamma Name -> TT Name -> 
+>             Gamma Name -> TT Name ->
 >             Maybe [Name] ->  -- Names not to reduce
 >             Maybe [(Name, Int)] -> -- Names to reduce a maximum number
 >             Maybe [(Name, ([Int], Int))] -> -- Names and list of static args
 >             TT Name
-> evaluate open gam tm jns maxns statics = -- trace ("EVALUATING: " ++ debugTT tm) $ 
+> evaluate open gam tm jns maxns statics = -- trace ("EVALUATING: " ++ debugTT tm) $
 >                                  let res = evalState (eval (True, True) tm [] [] []) (maxns, statics, 0)
 >                                      in {- trace ("RESULT: " ++ debugTT res) -}
 >                                         res
 >   where
->     eval :: (Bool, Bool) -> TT Name -> Stack -> SEnv -> 
+>     eval :: (Bool, Bool) -> TT Name -> Stack -> SEnv ->
 >             [(Name, TT Name)] -> State EvalState (TT Name)
 >     eval nms@(ev,top) tm stk env pats = -- trace (show (tm, stk, env, pats)) $
 >           {-# SCC "eval" #-} do eval' nms tm stk env pats
 >                                {- if (ev && top && null stk && tm'/=tm)
 >                                   then eval nms tm' [] env pats
 >                                   else return tm' -}
->                                
+>
 
->     eval' (everything, top) (P x) xs env pats 
+>     eval' (everything, top) (P x) xs env pats
 >         = {-# SCC "evalptop" #-} do
 >              (mns, sts, tmp) <- {-# SCC "evalpget" #-} get
 >              let (use, mns', sts') = {-# SCC "evalpif" #-}
@@ -115,12 +115,12 @@ Code			Stack	Env	Result
 >        where removep n [] = []
 >              removep n ((x,t):xs) | n==x = removep n xs
 >                                   | otherwise = (x,t):(removep n xs)
->     eval' nms@(ev,_) (V i) xs env pats 
+>     eval' nms@(ev,_) (V i) xs env pats
 >              = {-# SCC "evalVtoplevel" #-}
->                if (length env>i) 
+>                if (length env>i)
 >                   then eval nms (getEnv i env) xs env pats
 >                   else unload ev (V i) xs pats env -- blocked, so unload
->     eval' nms (App f a) xs env pats 
+>     eval' nms (App f a) xs env pats
 >        = do -- a' <- eval a [] env pats
 >             eval nms f ((a, env, pats):xs) env pats
 >     eval' nms (Bind n (B Lambda ty) (Sc sc)) xs env pats
@@ -130,7 +130,7 @@ Code			Stack	Env	Result
 >        = do ty' <- eval nms ty [] env pats
 >             {-# SCC "evalscope" #-} evalScope nms Pi n ty' sc xs env pats
 >            -- unload (Bind n (B Pi ty') (Sc sc)) [] pats env
->     eval' nms (Bind n (B (Let val) ty) (Sc sc)) xs env pats 
+>     eval' nms (Bind n (B (Let val) ty) (Sc sc)) xs env pats
 >        = do val' <- eval nms val [] env pats
 >             ty' <- eval nms ty [] env pats
 >             eval nms sc xs ((n,ty',val'):env) pats
@@ -139,10 +139,10 @@ Code			Stack	Env	Result
 >             unload ev (Bind n (B bt ty') (Sc sc)) [] pats env
 >     eval' (ev,_) x stk env pats = unload ev x stk pats env
 
->     evalP (ev, top) n (Just v) xs env pats 
+>     evalP (ev, top) n (Just v) xs env pats
 >        = {-# SCC "evalP" #-} case v of
 >             Fun opts (Ind v) -> eval (ev, False) v xs env pats
->             PatternDef p@(PMFun arity _) _ _ pc -> 
+>             PatternDef p@(PMFun arity _) _ _ pc ->
 >                 do ans <- {-# SCC "pmatchc" #-} pmatchC (ev, top) n pc xs env pats
 >                    -- ans <- pmatch (ev, top) n p xs env pats
 >                    return ans
@@ -153,7 +153,7 @@ Code			Stack	Env	Result
 >             _ -> unload ev (P n) xs pats env
 >     evalP (ev,top) n Nothing xs env pats = {-# SCC "evalP" #-} unload ev (P n) xs pats env -- blocked, so unload stack
 
->     evalScope nms b n ty sc stk@((x,xenv,xpats):xs) env pats 
+>     evalScope nms b n ty sc stk@((x,xenv,xpats):xs) env pats
 >              = do let n' = uniqify' n (allNames stk env pats)
 >                   x' <- eval nms x [] xenv xpats
 >                   eval nms sc xs ((n',ty,x'):env) pats
@@ -165,15 +165,15 @@ Code			Stack	Env	Result
 >                   sc' <- eval nms sc [] ((n',ty,P tmpname):env) pats
 >                   let newsc = pToV tmpname sc'
 >                   u' <- unload ev (Bind n' (B b ty) newsc) [] pats env
->                   --trace ("SCOPE: " ++ show (sc, newsc, env, debugTT u', debugTT (buildenv env u'))) $ 
+>                   --trace ("SCOPE: " ++ show (sc, newsc, env, debugTT u', debugTT (buildenv env u'))) $
 >                   return $ buildenv env u'
->       | otherwise 
+>       | otherwise
 >          = do let n' = uniqify' n (allNames [] env pats)
 >               u' <-  unload ev (Bind n' (B Lambda ty) (Sc sc)) [] pats env -- in Whnf
 >               return $ buildenv env u'
->     unload ev x [] pats env 
+>     unload ev x [] pats env
 >                = {-# SCC "unload" #-} return $ foldl (\tm (n,val) -> substName n val (Sc tm)) x pats
->     unload ev x ((a, aenv, apats):as) pats env 
+>     unload ev x ((a, aenv, apats):as) pats env
 >                = {-# SCC "unload" #-}
 >                  do a' <- eval (ev, False) a [] aenv apats
 >                     unload ev (App x a') as pats env
@@ -181,27 +181,27 @@ Code			Stack	Env	Result
 >     uniqify' u@(UN n) ns = {-# SCC "uniqify'" #-} uniqify (MN (n,0)) ns
 >     uniqify' n ns = {-# SCC "uniqify'" #-} uniqify n ns
 
->     evalStk ev ((a, aenv, apats):as) 
+>     evalStk ev ((a, aenv, apats):as)
 >         = do a' <- eval (ev, True) a [] aenv apats
 >              as' <- evalStk ev as
 >              return (a':as')
 >     evalStk ev [] = return []
 
->     evalArgs ev ((n, Left (a, aenv, apats)):as) 
+>     evalArgs ev ((n, Left (a, aenv, apats)):as)
 >         = do a' <- eval (ev, True) a [] aenv apats
 >              as' <- evalArgs ev as
 >              return ((n,a'):as')
->     evalArgs ev ((n,Right a'):as) 
+>     evalArgs ev ((n,Right a'):as)
 >         = do as' <- evalArgs ev as
 >              return ((n,a'):as')
 >     evalArgs ev [] = return []
 
-     usename x _ mns (sts, (stk, pats)) 
-          | Just (static, arity) <- lookup x sts 
+     usename x _ mns (sts, (stk, pats))
+          | Just (static, arity) <- lookup x sts
               = useDyn x mns static arity stk pats
 
 >     usename x Nothing Nothing (sts, _) = (True, Nothing, sts)
->     usename x _ (Just ys) (sts, _) 
+>     usename x _ (Just ys) (sts, _)
 >                 = case lookup x ys of
 >                      Just 0 -> (False, Just ys, sts)
 >                      Just n -> (True, Just (update x (n-1) ys), sts)
@@ -215,7 +215,7 @@ Code			Stack	Env	Result
 >     update x v (kv:xs) = kv : update x v xs
 
 >     buildenv [] t = t
->     buildenv ((n,ty,tm):xs) t 
+>     buildenv ((n,ty,tm):xs) t
 >                 = buildenv xs (subst tm (Sc t))
 >     --            = buildenv xs (Bind n (B (Let tm) ty) (Sc t))
 
@@ -226,37 +226,37 @@ Code			Stack	Env	Result
 >       rrhs namemap pbinds' [] rhs = {-trace ("BEFORE " ++ show (rhs, pbinds, pbinds')) $ -}
 >                                     (pbinds', substNames namemap rhs)
 >       rrhs namemap pbinds ((n,t):ns) rhs
->          = let n' = uniqify' (UN (show n)) (map sfst env ++ 
->                                             map fst pbinds ++ map fst ns ++ 
->                                             concat (map (map sfst) (map senv stk)) ++ 
+>          = let n' = uniqify' (UN (show n)) (map sfst env ++
+>                                             map fst pbinds ++ map fst ns ++
+>                                             concat (map (map sfst) (map senv stk)) ++
 >                                             concat (map (map fst) (map stkpats stk))) in
 >                rrhs ((n,P n'):namemap) ((n',t):pbinds) ns rhs
 
      substNames [] rhs = {-trace ("AFTER " ++ show rhs) $ -} rhs
      substNames ((n,t):ns) rhs = substNames ns (substName n t (Sc rhs))
 
->     pmatch (False, False) n _ xs env pats 
+>     pmatch (False, False) n _ xs env pats
 >            = unload False (P n) xs pats env
->     pmatch (ev, top) n (PMFun i clauses) xs env pats = matchtrace (show n) xs $ 
+>     pmatch (ev, top) n (PMFun i clauses) xs env pats = matchtrace (show n) xs $
 >         do (mns, statics, tmp) <- get
 >            let static = fmap (lookup n) statics
 >            let rcs = reqCons clauses
->            {- xs' <- zipWithM (\(x, xenv, xpats) reqcon -> 
+>            {- xs' <- zipWithM (\(x, xenv, xpats) reqcon ->
 >                     do x' <- if reqcon then eval (False, True) x [] xenv pats
->                                        else return x     
+>                                        else return x
 >                        return (x', xenv, xpats)) xs rcs -}
 >            old <- get -- HACK! If it fails, restore old state
 >            cm <- matches clauses xs env pats
 >            case cm of
 >              Nothing -> do put old
 >                            unload ev (P n) xs pats env
->              Just (rhs, pbinds, stk) -> 
+>              Just (rhs, pbinds, stk) ->
 >                do rhsin <- case static of
->                     -- Just (Just staticargs) -> 
+>                     -- Just (Just staticargs) ->
 >                        -- do -- mkNewDef n staticargs xs
->                        --    trace ("STATIC: " ++ show (n, staticargs, (map (\(x,y,z) -> x) xs))) $ return rhs 
+>                        --    trace ("STATIC: " ++ show (n, staticargs, (map (\(x,y,z) -> x) xs))) $ return rhs
 >                     _ -> return rhs
->                   let rhs' = bindRHS pbinds rhsin 
+>                   let rhs' = bindRHS pbinds rhsin
 >                   rhstrace (show n) rhs' []
 >                           $ eval (ev, False) rhs' stk env []
 
@@ -279,15 +279,15 @@ so better not look further!
 >               (Nothing, False) -> matches cs xs env pats
 >               (Nothing, True) -> return Nothing -- Stuck due to variable
 
->     match :: Scheme Name -> Stack -> SEnv -> 
+>     match :: Scheme Name -> Stack -> SEnv ->
 >              [(Name, TT Name)] ->
->              State EvalState 
+>              State EvalState
 >                    (Maybe (TT Name, [(Name, TT Name)], Stack), Bool)
->     match (Sch pats _ rhs) xs env patvars 
+>     match (Sch pats _ rhs) xs env patvars
 >               = do r <- matchargs pats xs rhs env patvars []
 >                    return r
 
->     matchargs [] xs (Ind rhs) env patvars pv' 
+>     matchargs [] xs (Ind rhs) env patvars pv'
 >                   = return $ (Just (rhs, pv', xs), False)
 >     matchargs (p:ps) ((x, xenv, xpats):xs) rhs env patvars pv'
 >       = do old <- get
@@ -325,7 +325,7 @@ stuck.
 >              = do x' <- eval (True, True) x [] [] []
 >                   case x' of
 >                     Const t' -> case cast t of
->                                   Just tc -> 
+>                                   Just tc ->
 >                                      if (tc == t') then return $ (Just patvars, False)
 >                                                    else return (Nothing, False)
 >                     _ -> return (Nothing, False)
@@ -391,7 +391,7 @@ Substitution using compiled matches
 >                [(Name, Either StackEntry (TT Name))] -> -- function arguments, value
 >                TSimpleCase Name -> -- compiled match
 >                State EvalState (Maybe (TT Name))
->     pmSubst n env args (TTm rhs) 
+>     pmSubst n env args (TTm rhs)
 >         = do rhs' <- {-# SCC "pmsubstnames" #-} substArgNames args rhs
 >              return $ Just rhs'
 >     pmSubst n env args TErrorCase = return $ Nothing
@@ -403,15 +403,15 @@ Substitution using compiled matches
 >             e -> do e' <- substArgNames args e
 >                     e' <- eval (True, True) e' [] env []
 >                     pmSubstCases e' cases args
->       where alookup acc n ((x,arg@(Left (a, aenv, apats))):args) 
+>       where alookup acc n ((x,arg@(Left (a, aenv, apats))):args)
 >                     | n == x = do e' <- eval (False, True) a [] aenv apats
 >                                   return (e', acc ++ (x, Right e'):args)
->             alookup acc n ((x,Right e'):args) 
+>             alookup acc n ((x,Right e'):args)
 >                     | n == x = return (e', acc ++ (x, Right e'):args)
 >             alookup acc n (a:args) = alookup (acc ++ [a]) n args
 
 >             pmSubstCases e [] args = return Nothing
->             pmSubstCases e (c:cs) args 
+>             pmSubstCases e (c:cs) args
 >                          = do t <- pmCase e c args
 >                               case t of
 >                                  (Just t', _) -> return (Just t')
@@ -425,14 +425,14 @@ Matching will either succeed, fail (but not be stuck), or realise it's stuck
 >             pmCase e (TAlt con t cargs sc) args
 >              | Just (t', cargs') <- getConArgs e []
 >                 = if (t==t' && length cargs == length cargs')
->                      then do v <- pmSubst n env 
+>                      then do v <- pmSubst n env
 >                                     (args ++ zip cargs (map Right cargs')) sc
 >                              return (v, False)
 >                      else return (Nothing, False)
 >              | otherwise = return (Nothing, True)
 >             pmCase (Const e) (TConstAlt c sc) args
 >                    = case cast e of
->                        Just e' -> if (e'==c) 
+>                        Just e' -> if (e'==c)
 >                           then do v <- pmSubst n env args sc
 >                                   return (v, False)
 >                           else return (Nothing, False)
@@ -453,10 +453,10 @@ Turn MN to UN, if they are unique, so that they look nicer.
 
 > tidyNames :: Indexed Name -> Indexed Name
 > tidyNames (Ind tm) = Ind (tidy' [] tm)
->   where tidy' ns (Bind (MN (n,i)) (B b t) (Sc tm)) = 
+>   where tidy' ns (Bind (MN (n,i)) (B b t) (Sc tm)) =
 >             let n' = uniqify (UN n) ns in
 >                 Bind n' (B b (tidy' ns t)) (Sc (tidy' (n':ns) tm))
->         tidy' ns (Bind x (B b t) (Sc tm)) 
+>         tidy' ns (Bind x (B b t) (Sc tm))
 >               = Bind x (B b (tidy' ns t)) (Sc (tidy' (x:ns) tm))
 >         tidy' ns (App f a) = App (tidy' ns f) (tidy' ns a)
 >         tidy' ns x = x

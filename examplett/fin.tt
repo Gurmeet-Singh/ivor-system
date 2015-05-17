@@ -13,4 +13,3 @@ intros;
 refine fs;
 fill p_IH;
 Qed;
-

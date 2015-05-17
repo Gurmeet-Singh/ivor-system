@@ -1,6 +1,6 @@
 > {-# OPTIONS_GHC -fglasgow-exts -fallow-undecidable-instances #-}
 
-> -- | 
+> -- |
 > -- Module      : Ivor.ViewTerm
 > -- Copyright   : Edwin Brady
 > -- Licence     : BSD-style (see LICENSE in the distribution)
@@ -8,24 +8,24 @@
 > -- Maintainer  : eb@dcs.st-and.ac.uk
 > -- Stability   : experimental
 > -- Portability : non-portable
-> -- 
-> -- Exported view of terms and inductive data structures; imported 
+> --
+> -- Exported view of terms and inductive data structures; imported
 > -- implicitly by "Ivor.TT".
 
 > module Ivor.ViewTerm(-- * Variable names
 >                        Name,name,displayName,NameType(..),mkVar,
 >                        -- * Terms
 >                        Term(..), ViewTerm(..), Annot(..), apply,
->                        view, viewType, ViewConst, typeof, 
->                        freeIn, namesIn, namesTypesIn, occursIn, 
->                        subst, getApp, 
+>                        view, viewType, ViewConst, typeof,
+>                        freeIn, namesIn, namesTypesIn, occursIn,
+>                        subst, getApp,
 >                        Ivor.ViewTerm.getFnArgs, transform,
 >                        getArgTypes, Ivor.ViewTerm.getReturnType,
 >                        dbgshow,
 >                        -- * Inductive types
 >                        Inductive(..),
 >                        -- * Compile pattern matches
->                        SimpleCase(..), CaseAlt(..)) 
+>                        SimpleCase(..), CaseAlt(..))
 >    where
 
 > import Ivor.TTCore as TTCore hiding (subst)
@@ -50,12 +50,12 @@
 > newtype Term = Term (Indexed Name, Indexed Name)
 
 > instance Show Term where
->     show (Term (Ind tm,Ind ty)) 
+>     show (Term (Ind tm,Ind ty))
 >         = show (makePs tm) ++ " : " ++ show (makePs ty) ++ "\n"
 
 > -- | Categories for names; typechecked terms will know what each variable
-> -- is for. 
-> data NameType = Bound | Free | DataCon | TypeCon | ElimOp 
+> -- is for.
+> data NameType = Bound | Free | DataCon | TypeCon | ElimOp
 >               | Unknown -- ^ Use for sending to typechecker.
 >   deriving (Show, Enum, Eq)
 
@@ -64,7 +64,7 @@
 >          -> ViewTerm
 > mkVar nm = Name Unknown (name nm)
 
-> data ViewTerm 
+> data ViewTerm
 >     = Name { nametype :: NameType, var :: Name }
 >     | Overloaded { vars :: [Name] } -- ^ on input only, list of possible names, to be resolved to one by the type checker.
 >     | App { fun :: ViewTerm, arg :: ViewTerm }
@@ -100,7 +100,7 @@
 >              | Default SimpleCase
 
 > instance Show CaseAlt where
->     show (Alt n i args sc) = "Alt " ++ show (n,i) ++ " " ++ 
+>     show (Alt n i args sc) = "Alt " ++ show (n,i) ++ " " ++
 >                              show args ++ " => " ++ show sc
 >     show (Default sc) = "Default => " ++ show sc
 
@@ -109,7 +109,7 @@
 >     (==) (Ivor.ViewTerm.App f a) (Ivor.ViewTerm.App f' a') = f == f' && a == a'
 >     (==) (Ivor.ViewTerm.Lambda n ty sc) (Ivor.ViewTerm.Lambda n' ty' sc') = n==n' && ty==ty' && sc==sc'
 >     (==) (Forall n ty sc) (Forall n' ty' sc') = n==n' && ty==ty' && sc==sc'
->     (==) (Ivor.ViewTerm.Let n v ty sc) (Ivor.ViewTerm.Let n' v' ty' sc') = n==n' && v==v' 
+>     (==) (Ivor.ViewTerm.Let n v ty sc) (Ivor.ViewTerm.Let n' v' ty' sc') = n==n' && v==v'
 >                                                 && ty==ty' && sc==sc'
 >     (==) (Ivor.ViewTerm.Label _ _ ty) (Ivor.ViewTerm.Label _ _ ty') = ty == ty'
 >     (==) (Ivor.ViewTerm.Call _ _ t) (Ivor.ViewTerm.Call _ _ t') = t == t'
@@ -143,7 +143,7 @@
 > apply f (x:xs) = Ivor.ViewTerm.apply (Ivor.ViewTerm.App f x) xs
 
 > data Inductive
->     = Inductive { typecon :: Name, 
+>     = Inductive { typecon :: Name,
 >                   parameters :: [(Name,ViewTerm)],
 >                   indices :: [(Name,ViewTerm)],
 >                   contype :: ViewTerm,
@@ -152,15 +152,15 @@
 > instance Forget ViewTerm Raw where
 >     forget (Overloaded vs) = ROpts vs
 >     forget (Ivor.ViewTerm.App f a) = RApp (forget f) (forget a)
->     forget (Ivor.ViewTerm.Lambda v ty sc) = RBind v 
->                                            (B TTCore.Lambda (forget ty)) 
+>     forget (Ivor.ViewTerm.Lambda v ty sc) = RBind v
+>                                            (B TTCore.Lambda (forget ty))
 >                                            (forget sc)
 >     forget (Forall v ty sc) = RBind v (B Pi (forget ty)) (forget sc)
 >     forget (Ivor.ViewTerm.Let v ty val sc) = RBind v (B (TTCore.Let (forget val))
 >                                                  (forget ty)) (forget sc)
->     forget (Ivor.ViewTerm.Label n args ty) 
+>     forget (Ivor.ViewTerm.Label n args ty)
 >         = RLabel (forget ty) (RComp n (map forget args))
->     forget (Ivor.ViewTerm.Call n args ty) 
+>     forget (Ivor.ViewTerm.Call n args ty)
 >         = RCall (RComp n (map forget args)) (forget ty)
 >     forget (Ivor.ViewTerm.Return ty) = RReturn (forget ty)
 >     forget (Constant c) = RConst c
@@ -224,13 +224,13 @@
 >     vtaux ctxt (TTCore.Call (Comp n ts) ty) =
 >         Ivor.ViewTerm.Call n (fmap (vtaux ctxt) ts) (vtaux ctxt ty)
 >     vtaux ctxt (TTCore.Return ty) = Ivor.ViewTerm.Return (vtaux ctxt ty)
->     vtaux ctxt (Stage (TTCore.Quote tm)) 
+>     vtaux ctxt (Stage (TTCore.Quote tm))
 >         = Ivor.ViewTerm.Quote (vtaux ctxt tm)
->     vtaux ctxt (Stage (TTCore.Code tm)) 
+>     vtaux ctxt (Stage (TTCore.Code tm))
 >         = Ivor.ViewTerm.Code (vtaux ctxt tm)
->     vtaux ctxt (Stage (TTCore.Eval tm _)) 
+>     vtaux ctxt (Stage (TTCore.Eval tm _))
 >         = Ivor.ViewTerm.Eval (vtaux ctxt tm)
->     vtaux ctxt (Stage (TTCore.Escape tm _)) 
+>     vtaux ctxt (Stage (TTCore.Escape tm _))
 >         = Ivor.ViewTerm.Escape (vtaux ctxt tm)
 >     vtaux ctxt (Meta n _) = Metavar n
 >     vtaux ctxt Erased = Placeholder
@@ -242,12 +242,12 @@
 >    fi n (Ivor.ViewTerm.Name _ x) | x == n = True
 >                    | otherwise = False
 >    fi n (Ivor.ViewTerm.App f a) = fi n f || fi n a
->    fi n (Ivor.ViewTerm.Lambda x ty sc) 
+>    fi n (Ivor.ViewTerm.Lambda x ty sc)
 >        | x == n = False
 >        | otherwise = fi n ty || fi n sc
 >    fi n (Forall x ty sc) | x == n = False
 >                          | otherwise = fi n ty || fi n sc
->    fi n (Ivor.ViewTerm.Let x v ty sc) 
+>    fi n (Ivor.ViewTerm.Let x v ty sc)
 >        | x == n = False
 >        | otherwise = fi n v || fi n ty || fi n sc
 >    fi n (Ivor.ViewTerm.Label _ _ t) = fi n t
@@ -335,7 +335,7 @@
 >                      checkDups acc [] where
 >   m' (Metavar n) t acc = return ((n,t):acc)
 >   m' Placeholder t acc = return acc
->   m' (Ivor.ViewTerm.App f a) (Ivor.ViewTerm.App f' a') acc 
+>   m' (Ivor.ViewTerm.App f a) (Ivor.ViewTerm.App f' a') acc
 >       = do acc' <- m' f f' acc
 >            m' a a' acc'
 >   m' (Annotation _ t) t' acc = m' t t' acc
@@ -345,7 +345,7 @@
 >              | otherwise = fail $"Mismatch " ++ show x ++ " and " ++ show y
 
 >   checkDups [] acc = return acc
->   checkDups ((x,t):xs) acc 
+>   checkDups ((x,t):xs) acc
 >      = case lookup x xs of
 >          Just t' -> if t == t' then checkDups xs acc
 >                                else fail $ "Mismatch on " ++ show x
@@ -361,34 +361,34 @@
 > replaceMeta ms x = x
 
 
-> -- |Substitute a name n with a value v in a term f 
+> -- |Substitute a name n with a value v in a term f
 > subst :: Name -> ViewTerm -> ViewTerm -> ViewTerm
 > subst n v nm@(Name _ p) | p == n = v
 >                         | otherwise = nm
-> subst n v (Ivor.ViewTerm.App f a) 
+> subst n v (Ivor.ViewTerm.App f a)
 >    = Ivor.ViewTerm.App (subst n v f) (subst n v a)
-> subst n v (Ivor.ViewTerm.Lambda nn ty sc) 
+> subst n v (Ivor.ViewTerm.Lambda nn ty sc)
 >    = Ivor.ViewTerm.Lambda nn (subst n v ty) $
 >         if (n==nn) then sc else subst n v sc
-> subst n v (Forall nn ty sc) 
+> subst n v (Forall nn ty sc)
 >    = Forall nn (subst n v ty) $
 >         if (n==nn) then sc else subst n v sc
-> subst n v (Ivor.ViewTerm.Let nn ty vv sc) 
+> subst n v (Ivor.ViewTerm.Let nn ty vv sc)
 >    = Ivor.ViewTerm.Let nn (subst n v ty) (subst n v vv) $
 >         if (n==nn) then sc else subst n v sc
 > subst n v (Ivor.ViewTerm.Label fn args ty)
 >    = Ivor.ViewTerm.Label fn (map (subst n v) args) (subst n v ty)
 > subst n v (Ivor.ViewTerm.Call fn args ty)
 >    = Ivor.ViewTerm.Call fn (map (subst n v) args) (subst n v ty)
-> subst n v (Ivor.ViewTerm.Return r) 
+> subst n v (Ivor.ViewTerm.Return r)
 >           = Ivor.ViewTerm.Return (subst n v r)
-> subst n v (Ivor.ViewTerm.Quote r) 
+> subst n v (Ivor.ViewTerm.Quote r)
 >           = Ivor.ViewTerm.Quote (subst n v r)
-> subst n v (Ivor.ViewTerm.Code r) 
+> subst n v (Ivor.ViewTerm.Code r)
 >           = Ivor.ViewTerm.Code (subst n v r)
-> subst n v (Ivor.ViewTerm.Eval r) 
+> subst n v (Ivor.ViewTerm.Eval r)
 >           = Ivor.ViewTerm.Eval (subst n v r)
-> subst n v (Ivor.ViewTerm.Escape r) 
+> subst n v (Ivor.ViewTerm.Escape r)
 >           = Ivor.ViewTerm.Escape (subst n v r)
 > subst n v (Annotation a t) = Annotation a (subst n v t)
 > subst n v t = t
@@ -399,13 +399,13 @@
 >           -> ViewTerm -- ^ Term to rewrite
 >           -> ViewTerm
 > transform lhs rhs term = tr' term where
->     tr' (Ivor.ViewTerm.App f a) 
+>     tr' (Ivor.ViewTerm.App f a)
 >             = doTr $ Ivor.ViewTerm.App (tr' f) (tr' a)
->     tr' (Ivor.ViewTerm.Lambda v t sc) 
+>     tr' (Ivor.ViewTerm.Lambda v t sc)
 >             = doTr $ Ivor.ViewTerm.Lambda v (tr' t) (tr' sc)
->     tr' (Ivor.ViewTerm.Forall v t sc) 
+>     tr' (Ivor.ViewTerm.Forall v t sc)
 >             = doTr $ Ivor.ViewTerm.Forall v (tr' t) (tr' sc)
->     tr' (Ivor.ViewTerm.Let v t val sc) 
+>     tr' (Ivor.ViewTerm.Let v t val sc)
 >             = doTr $ Ivor.ViewTerm.Let v (tr' t) (tr' val) (tr' sc)
 >     tr' (Annotation a t) = doTr $ Annotation a (tr' t)
 >     tr' x = doTr x

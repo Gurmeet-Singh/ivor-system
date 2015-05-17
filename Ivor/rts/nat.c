@@ -45,7 +45,7 @@ VAL natElim(VAL n, VAL P, VAL mz, VAL ms) {
 	return mz;
 	break;
     case 1:
-	return eval(CLOSUREADD2(ms, GETCONARG(n,0), 
+	return eval(CLOSUREADD2(ms, GETCONARG(n,0),
 			   natElim(GETCONARG(n,0), P, mz, ms)));
 	break;
     default:

@@ -215,4 +215,3 @@ and replace it.
 >     p' (Stage (Eval t ty)) = Stage (Eval (p' t) (p' ty))
 >     p' (Stage (Escape t ty)) = Stage (Escape (p' t) (p' ty))
 >     p' x = x
-

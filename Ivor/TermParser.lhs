@@ -1,4 +1,4 @@
-> -- | 
+> -- |
 > -- Module      : Ivor.TermParser
 > -- Copyright   : Edwin Brady
 > -- Licence     : BSD-style (see LICENSE in the distribution)
@@ -6,7 +6,7 @@
 > -- Maintainer  : eb@dcs.st-and.ac.uk
 > -- Stability   : experimental
 > -- Portability : non-portable
-> -- 
+> --
 > -- Extensible Parsec based parsing library for 'ViewTerm's.
 > --
 > -- Briefly, the syntax is as follows:
@@ -18,11 +18,11 @@
 > --  * @A -> B@ -- Forall binding where name bound is not used in @B@..
 > --
 > --  * @let x:A=v in y@ -- Let binding, @x=v@ in scope @y@.
-> -- 
+> --
 > --  * @f a@ -- Function application (left associative, by juxtaposition).
-> --   
+> --
 > --  * @[identifier]@ -- names are legal Haskell identifiers.
-> --  
+> --
 > --  * @\*@ -- Asterisk is type of types.
 > --
 > --  * @_@ -- Underscore is a placeholder.
@@ -41,14 +41,14 @@
 > --  * @!x@ -- evaluate a quoted term
 > --
 > --  * @~x@ -- escape a quoted term (i.e. splice into a quoted term)
-> -- 
+> --
 > -- Extensions for labelled types (see McBride\/McKinna \"The View
 > -- From The Left\" for details):
 > --
 > --  * @\<[identifier] args : t\>@ -- Labelled type.
 > --
 > --  * @call \<label\> term@ -- Call a computation.
-> --   
+> --
 > --  * @return t@ -- Return a value from a computation.
 > --
 
@@ -90,7 +90,7 @@
 > arrow = do symbol "->" ; return $ Forall (name "X")
 
 > -- | Basic parsec combinator for parsing terms.
-> pTerm :: Maybe (Parser ViewTerm) -- ^ Extra parse rules (for example 
+> pTerm :: Maybe (Parser ViewTerm) -- ^ Extra parse rules (for example
 >          -- for any primitive types or operators you might have added).
 >          -> Parser ViewTerm
 > pTerm Nothing = try (do chainl1 (pNoApp Nothing) app)
@@ -101,14 +101,14 @@
 >                    <|> try (pNoApp (Just ext))
 >                    <|> ext
 
-> -- | Parse a term which is not an application; 
+> -- | Parse a term which is not an application;
 > -- use for parsing lists of terms.
 > pNoApp :: Maybe (Parser ViewTerm) -> Parser ViewTerm
 > pNoApp ext = try (do chainr1 (pExp ext) arrow)
 >              <|> pExp ext
 
 > pNoInfix :: Maybe (Parser ViewTerm) -> Parser ViewTerm
-> pNoInfix ext = 
+> pNoInfix ext =
 >        do lchar '[' ; bs <- bindList ext ; lchar ']'
 >           sc <- pTerm ext ;
 >           return $ bindAll Lambda bs sc
@@ -125,7 +125,7 @@
 >               (nm,args) <- computation ext ; lchar ':' ; lty <- pTerm ext
 >               lchar '>';
 >               return $ Label nm args lty
->        <|> do reserved "call" ; lchar '<' 
+>        <|> do reserved "call" ; lchar '<'
 >               (nm,args) <- computation ext ;
 >               lchar '>' ; tm <- pNoApp ext;
 >               return $ Call nm args tm
@@ -152,7 +152,7 @@
 > pExp :: Maybe (Parser ViewTerm) -> Parser ViewTerm
 > pExp ext = pNoInfix ext -- buildExpressionParser opTable (pNoInfix ext)
 
--- > pInfix ext = do 
+-- > pInfix ext = do
 -- >                 lexp <- trace ("Trying = ") $ pNoApp ext
 -- >                 lchar '='
 -- >                 rexp <- trace (show lexp) $ pTerm ext
@@ -168,7 +168,7 @@
 
 
 > -- | Basic parsec combinator for parsing inductive data types
-> pInductive :: Maybe (Parser ViewTerm) -- ^ Extra parse rules (for example 
+> pInductive :: Maybe (Parser ViewTerm) -- ^ Extra parse rules (for example
 >          -- for any primitive types or operators you might have added).
 >          -> Parser Inductive
 > pInductive ext = do nm <- identifier
@@ -181,11 +181,11 @@
 >                                          lchar ')' ; return xs)
 >                     ty <- pTerm ext ; whereIntro
 >                     cons <- sepBy (constructor ext) (lchar '|')
->                     return $ Inductive (UN nm) 
->                                        (concat parmsM) 
+>                     return $ Inductive (UN nm)
+>                                        (concat parmsM)
 >                                        (concat indicesM)
 >                                        ty cons
->   where whereIntro = do lchar '=' 
+>   where whereIntro = do lchar '='
 >                         return ()
 >                      <|> do reserved "where"
 >                             return ()
@@ -195,7 +195,7 @@
 >                      return $ (UN nm,ty)
 
 > bindList :: Maybe (Parser ViewTerm) -> Parser [(Name, ViewTerm)]
-> bindList ext 
+> bindList ext
 >     = do namelist <- sepBy1 identifier comma
 >          lchar ':'
 >          ty <- pTerm ext
@@ -212,7 +212,7 @@
 > -- | Parse a string into a ViewTerm, without mucking about with parsec
 > -- or any extra parse rules.
 > parseTermString :: Monad m => String -> m ViewTerm
-> parseTermString str 
+> parseTermString str
 >     = case parse (do t <- pTerm Nothing ; eof ; return t) "(input)" str of
 >           Left err -> fail (show err)
 >           Right tm -> return tm
@@ -220,8 +220,8 @@
 > -- | Parse a string into an Inductive, without mucking about with parsec
 > -- or any extra parse rules.
 > parseDataString :: Monad m => String -> m Inductive
-> parseDataString str 
->     = case parse (do t <- pInductive Nothing ; eof ; return t) 
+> parseDataString str
+>     = case parse (do t <- pInductive Nothing ; eof ; return t)
 >                   "(input)" str of
 >           Left err -> fail (show err)
 >           Right d -> return d

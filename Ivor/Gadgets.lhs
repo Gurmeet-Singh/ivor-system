@@ -15,7 +15,7 @@
 
 =================== Result Monad ========================
 
-> data Result r 
+> data Result r
 >     = Success r
 >     | Failure String
 >  deriving (Show, Eq)

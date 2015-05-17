@@ -63,11 +63,11 @@ I wonder how generally useful this is...
 >      getarity n = case lookup n scs of
 >		       (Just (a,d)) -> a
 >	               Nothing -> error "Can't happen (scompile)"
->      bcomp v t (SCase scr alts) = 
+>      bcomp v t (SCase scr alts) =
 >         (EVAL scr):
 >         [CASE scr (map (acomp v t) alts)]
->      bcomp v t (SApp (SP n) as) 
->             | getarity n == length as = 
+>      bcomp v t (SApp (SP n) as)
+>             | getarity n == length as =
 >	          concat (mapInc (ecomp v) as (t+1))
 >		     ++ [TAILCALL n (mktargs (length as) (t+1))]
 >      bcomp v t x = (ecomp v t x):[RETURN t]
@@ -82,12 +82,12 @@ I wonder how generally useful this is...
 >   --   ecomp v (SElim n) | getarity n == 0 = CALL n []
 >   --		         | otherwise = CLOSURE n []
 >      ecomp v t (SV i) = VAR t i
->      ecomp v t (SCon tag n as) 
+>      ecomp v t (SCon tag n as)
 >	          = concat (mapInc (ecomp v) as (t+1))
 >		     ++ [CON t tag (mktargs (length as) (t+1))]
 
 >      ecomp v t (SApp f as) = fcomp v t f as
->      ecomp v t (SLet val ty b) = 
+>      ecomp v t (SLet val ty b) =
 >                (ecomp v (t+1) val) ++
 >	         (ALET v (t+1)):
 >	         (ecomp (v+1) (t+2) b)
@@ -97,11 +97,11 @@ I wonder how generally useful this is...
 >      ecomp v t (SConst c) = ccomp c t
 >      ecomp v t _ = [TYPE t]
 
->      fcomp v t (SP n) as 
+>      fcomp v t (SP n) as
 >           | getarity n == length as
 >	          = concat (mapInc (ecomp v) as (t+1))
 >		     ++ [CALL t n (mktargs (length as) (t+1))]
->	    | otherwise 
+>	    | otherwise
 >	          = concat (mapInc (ecomp v) as (t+1))
 >		     ++ [CLOSURE t n (mktargs (length as) (t+1))]
 >      fcomp v t f as = CLOSUREADD (ecomp v f) (map (ecomp v) as)

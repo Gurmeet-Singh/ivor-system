@@ -265,7 +265,7 @@ solvable by unification). (FIXME: Not yet implemented.)
 >        let bvin = makePsEnv (map fst env) bv
 >        -- let (Just (Ind nty)) = lookuptype n gam
 
-Get the names and types of the arguments to be passed to the thing 
+Get the names and types of the arguments to be passed to the thing
 we're refining by.
 
 >        let claimTypes = getClaims (makePsEnv (map fst env) nty)
@@ -275,11 +275,11 @@ Normalise the goal.
 
 >        let (Ind tyin') = finalise (normaliseEnv (ptovenv env) gam (Ind ty))
 
-Type check the application we've just built, with the placeholders, some of 
+Type check the application we've just built, with the placeholders, some of
 which may have been solved.
 
 >        (Ind rtch, rtych, ev) <- checkAndBind gam (ptovenv env) rawapp (Just (Ind tyin'))
->        let argguesses = -- trace (show rawapp ++ "\n" ++ show tyin' ++ "\n" ++ show rtch ++ "\n" ++ show rtych ++ "\nNew env: " ++ show ev) $ 
+>        let argguesses = -- trace (show rawapp ++ "\n" ++ show tyin' ++ "\n" ++ show rtch ++ "\n" ++ show rtych ++ "\nNew env: " ++ show ev) $
 >                         getArgs rtch
 
 So we'll have an application, some of the arguments with inferred
@@ -423,7 +423,7 @@ Normalise the goal, only expanding the given global name.
 >    do case glookup fn gam of
 >           Nothing -> tacfail $ "Unknown name " ++ show fn
 >           Just (v,t) -> do
->              let (Ind nty) = normaliseEnv (ptovenv env) 
+>              let (Ind nty) = normaliseEnv (ptovenv env)
 >                                           (extend emptyGam (fn, (G v t defplicit)))
 >                                           (finalise (Ind ty))
 >              tacret $ Ind (Bind x (B Hole nty) sc)

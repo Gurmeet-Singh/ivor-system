@@ -10,7 +10,7 @@
 
 IO primitives; adds 'RealWorld' and 'Handle'
 
-RealWorld is a dummy type representing the world state, Handle (from 
+RealWorld is a dummy type representing the world state, Handle (from
 System.IO) gives file handles.
 
 > data RealWorld = RW ()
@@ -45,7 +45,7 @@ System.IO) gives file handles.
 >                             "(IO String)"
 >                     return c
 
-Make an instance of IOResult from the result of an IO action and a 
+Make an instance of IOResult from the result of an IO action and a
 value
 
 > mkIO :: () -> ViewTerm -> ViewTerm

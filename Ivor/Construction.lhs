@@ -1,6 +1,6 @@
 > {-# OPTIONS_GHC -fglasgow-exts #-}
 
-> -- | 
+> -- |
 > -- Module      : Ivor.Construction
 > -- Copyright   : Edwin Brady
 > -- Licence     : BSD-style (see LICENSE in the distribution)
@@ -8,7 +8,7 @@
 > -- Maintainer  : eb@dcs.st-and.ac.uk
 > -- Stability   : experimental
 > -- Portability : non-portable
-> -- 
+> --
 > -- Some generic tactics for solving goals by applying constructors
 
 > module Ivor.Construction(auto,split,left,right,useCon,exists,
@@ -17,7 +17,7 @@
 > import Ivor.TT
 > import Debug.Trace
 
-> -- | Tries to solve a simple goal automatically by trying each of these 
+> -- | Tries to solve a simple goal automatically by trying each of these
 > --   in turn:
 > --  * Looking for an assumption ('trivial')
 > --  * 'intros' everything then solve by 'auto'
@@ -71,9 +71,9 @@ check that there is the right number (num).
 >          splitnCon _ = \g ctxt -> fail $ "Not a " ++ show num ++ " constructor family"
 
 > -- | Solve an existential by providing a witness.
-> -- More generally; apply the first constructor of the 
+> -- More generally; apply the first constructor of the
 > -- goal's type and provide the witness as its first non-inferrable argument.
-> exists :: IsTerm a => a -- ^Witness 
+> exists :: IsTerm a => a -- ^Witness
 >                       -> Tactic
 > exists t = useCon 1 0 >+> fill t
 
@@ -81,20 +81,19 @@ check that there is the right number (num).
 > -- | Try to solve a goal @A@ by evaluating a term of type @Maybe A@. If the
 > -- answer is @Just a@, fill in the goal with the proof term @a@.
 > isItJust :: IsTerm a => a -> Tactic
-> isItJust tm g ctxt = do 
->     gd <- goalData ctxt False g 
+> isItJust tm g ctxt = do
+>     gd <- goalData ctxt False g
 >     let gty = view $ goalType gd
 >     vtm <- evalCtxt ctxt g tm
 >     let (prf, ty) = (view vtm, viewType vtm)
 >     -- make sure type is 'Maybe'
 >     case ty of
->        (App (Name _ m) a) | m == (name "Maybe") 
+>        (App (Name _ m) a) | m == (name "Maybe")
 >           -> do case prf of
 >                  (App (Name _ n) _) | n == (name "Nothing")
 >                      -> fail "No solution found"
 >                  (App (App (Name _ j) _) p) | j == (name "Just")
 >                      -> fill p g ctxt
 >                  tm -> fail $ "Evaluated to " ++ show tm
->        _ -> fail $ "Type of decision procedure must be ++ " ++ 
+>        _ -> fail $ "Type of decision procedure must be ++ " ++
 >                       show (App (Name Unknown (name "Maybe")) gty)
-

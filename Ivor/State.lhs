@@ -79,14 +79,14 @@ Take a data type definition and add constructors and elim rule to the context.
 >                        -- let ctxt' = (tycon dt):ctxt
 >            ctxt <- addCons (datacons dt) ctxt
 >            case e_ischemes dt of
->              Just eischemes -> 
+>              Just eischemes ->
 >                  -- We've done elim rules
 >                do let (Just cischemes) = c_ischemes dt
->                   ctxt <- 
+>                   ctxt <-
 >                       addElim ctxt (erule dt) eischemes
 >                   newdefs <-
 >                       addElim ctxt (crule dt) cischemes
->                   let newelims = (fst (erule dt), (snd (erule dt), 
+>                   let newelims = (fst (erule dt), (snd (erule dt),
 >                              (e_rawschemes dt, eischemes))):
 >                           (fst (crule dt), (snd (crule dt),
 >                              (c_rawschemes dt, cischemes))):
@@ -96,7 +96,7 @@ Take a data type definition and add constructors and elim rule to the context.
 >                                 eliminators = newelims
 >                                 }
 >              Nothing -> -- no elim rules
->                   return $ st { defs = ctxt, 
+>                   return $ st { defs = ctxt,
 >                                 datadefs = (n,dt):(datadefs st) }
 >    where addCons [] ctxt = return ctxt
 >          addCons ((n,gl):xs) ctxt = do
@@ -114,7 +114,7 @@ Take a data type definition and add constructors and elim rule to the context.
 
 
 > doMkData :: Bool -> IState -> Datadecl -> IvorM IState
-> doMkData elim st (Datadecl n ps rawty cs) 
+> doMkData elim st (Datadecl n ps rawty cs)
 >     = do (gty,_) <- checkIndices (defs st) ps [] rawty
 >          let ty = forget (normalise (defs st) gty)
 >          -- TMP HACK: Do it twice, to fill in _ placeholders.

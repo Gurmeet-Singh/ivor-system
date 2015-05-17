@@ -1,12 +1,12 @@
-# DB = 
+# DB =
 # PREFIX = /usr/local
 DB = --user
 PREFIX = $(HOME)
 
 # Set this to -p for profiling libraries too
-PROFILE = 
+PROFILE =
 
-CABALOPTS = -O 
+CABALOPTS = -O
 
 package:
 	echo "module Ivor.Prefix where prefix = \"$(PREFIX)\"" > Ivor/Prefix.hs

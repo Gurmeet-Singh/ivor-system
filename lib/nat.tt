@@ -170,4 +170,3 @@ replace (plus_comm m0 (plus k x));
 refine refl;
 Qed;
 Freeze multnSm;
-

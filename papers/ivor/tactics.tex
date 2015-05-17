@@ -1,7 +1,7 @@
 \section{The \Ivor{} Library}
 
 %Given the basic operations defined in section \ref{holeops}, we can
-%create a library of tactics. 
+%create a library of tactics.
 
 The \Ivor{} library allows the incremental, type directed development
 of $\source$ terms.  In this section, I will introduce the basic
@@ -31,7 +31,7 @@ class IsTerm a where
 \end{verbatim}
 
 The \texttt{check} method parses and typechecks the given term, as
-appropriate, and if successful returns the internal representation. 
+appropriate, and if successful returns the internal representation.
 Constructing a term in this way may fail (e.g. due to a syntax or
 type error) so \texttt{check} is generalised over a monad
 \hdecl{m} --- it may help to read \hdecl{m} as \hdecl{Maybe}.
@@ -81,7 +81,7 @@ theorem :: (IsTerm a, Monad m) => Context -> Name -> a -> m Context
 \end{verbatim}
 
 A proof state can be thought of as an incomplete term, i.e. a
-term in the development calculus. 
+term in the development calculus.
 For example, calling \hdecl{theorem}
 with the name $\FN{plus}$ and type $\Nat\to\Nat\to\Nat$, an initial
 proof state would be:
@@ -170,11 +170,11 @@ hole. The \hdecl{fill} function takes a guess to attach to the current
 goal. In addition, \hdecl{fill} attempts to solve other goals by
 unification. Attaching a guess does not necessarily solve the goal
 completely; if the guess contains further hole bindings, it cannot yet
-have any computational force. 
+have any computational force.
 %% The \hdecl{solve} tactic is provided to
 %% check whether a guess is \demph{pure} (i.e. does not contain any hole
 %% bindings or guesses itself) and converts it to a $\RW{let}$ binding if
-%% so.  
+%% so.
 A guess can be removed from a goal with the \hdecl{abandon}
 tactic.
 
@@ -423,7 +423,7 @@ more complex domain specific tactics. We will see examples in
 sections \ref{example1} and \ref{example2}.
 
 \subsubsection{Sequencing Tactics}
-There are three basic operators for combining two tactics to create a 
+There are three basic operators for combining two tactics to create a
 new tactic:
 
 \begin{verbatim}
@@ -456,7 +456,7 @@ Note that the type of this is better understood as \hdecl{[Tactic] ->
 abstracted over all of the combined tactics.
 
 \subsubsection{Handling Failure}
-Tactics may fail (for example a refinement may be ill-typed). 
+Tactics may fail (for example a refinement may be ill-typed).
 Recovering gracefully from a failure may be needed, for
 example to try a number of possible ways of rewriting a term.
 The \hdecl{try} combinator is an exception handling combinator.

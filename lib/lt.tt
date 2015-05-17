@@ -52,4 +52,3 @@ refine and_intro;
 refine a;
 refine a0;
 Qed;
-

@@ -83,7 +83,7 @@ to do with it, when the time comes.
 > glookup ::  (Ord n, Eq n) => n -> Gamma n -> Maybe (Global n,Indexed n)
 > glookup n (Gam xs) = fmap (\x -> (getglob x,gettype x)) (Map.lookup n xs)
 
-> glookupall ::  (Ord n, Eq n) => n -> Gamma n -> 
+> glookupall ::  (Ord n, Eq n) => n -> Gamma n ->
 >                Maybe (Global n,Indexed n, Plicity)
 > glookupall n (Gam xs) = fmap (\x -> (getglob x,gettype x,getplicity x)) (Map.lookup n xs)
 
@@ -151,19 +151,19 @@ Insert a name into the context. If the name is already there, this
 is an error *unless* the old definition was 'Undefined', in which case
 the name is replaced.
 
-> gInsert :: (Monad m, Ord n, Eq n, Show n) => 
+> gInsert :: (Monad m, Ord n, Eq n, Show n) =>
 >            n -> Gval n -> Gamma n -> m (Gamma n)
 > gInsert nm val (Gam xs) = case Map.lookup nm xs of
 >         -- FIXME: Check ty against val
 >       Nothing -> return $ Gam (Map.insert nm val xs)
 >       Just (G Undefined ty _) -> return $ Gam (Map.insert nm val xs)
->       Just (G (TCon _ NoConstructorsYet) ty _) -> 
+>       Just (G (TCon _ NoConstructorsYet) ty _) ->
 >                                  return $ Gam (Map.insert nm val xs)
 >       Just _ -> fail $ "Name " ++ show nm ++ " is already defined"
 
 Replace a name in the context with a new pattern matching definitions
 
-> gReplace :: (Monad m, Ord n, Eq n, Show n) => 
+> gReplace :: (Monad m, Ord n, Eq n, Show n) =>
 >             n -> Gval n -> Gamma n -> m (Gamma n)
 > gReplace nm val gam = do let gam' = remove nm gam
 >                          gInsert nm val gam'

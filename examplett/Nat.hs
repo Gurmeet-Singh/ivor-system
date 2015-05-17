@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -fglasgow-exts #-} 
+{-# OPTIONS_GHC -fglasgow-exts #-}
 
 module Nat where
 
@@ -13,7 +13,7 @@ data Val = Val
 class Project x where
     project :: forall val. Int -> x -> val
 
-data TT_Nat = TT_O | forall arg. TT_S arg 
+data TT_Nat = TT_O | forall arg. TT_S arg
 
 instance Project TT_Nat where
     project 0 (TT_S  a0) = ((coerce a0)::val)
@@ -23,7 +23,7 @@ instance Project TT_Nat where
 fn_NatElim :: val -> val -> val -> val -> val
 fn_NatElim = (\v0 -> (\v1 -> (\v2 -> (\v3 -> (case ((coerce v0)::TT_Nat) of { TT_O  -> v2 ; TT_S _  -> (((coerce v3)::val->val->val) ((coerce (project 0((coerce v0)::TT_Nat)))::val) ((coerce (((coerce fn_NatElim)::val->val->val->val->val) ((coerce (project 0((coerce v0)::TT_Nat)))::val) ((coerce v1)::val) ((coerce v2)::val) ((coerce v3)::val) ))::val) ) ; })))))
 
-data TT_True = TT_II 
+data TT_True = TT_II
 fn_TrueElim :: val -> val -> val -> val
 fn_TrueElim = (\v0 -> (\v1 -> (\v2 -> (case ((coerce v0)::TT_True) of { TT_II  -> v2 ; }))))
 
@@ -31,7 +31,7 @@ data TT_False = TT_False
 fn_FalseElim :: val -> val -> val
 fn_FalseElim = (\v0 -> (\v1 -> error "Impossible"))
 
-data TT_Ex = forall arg. TT_ex_intro arg arg arg arg 
+data TT_Ex = forall arg. TT_ex_intro arg arg arg arg
 
 instance Project TT_Ex where
     project 3 (TT_ex_intro  a0 a1 a2 a3) = ((coerce a3)::val)
@@ -44,7 +44,7 @@ instance Project TT_Ex where
 fn_ExElim :: val -> val -> val -> val -> val -> val
 fn_ExElim = (\v0 -> (\v1 -> (\v2 -> (\v3 -> (\v4 -> (case ((coerce v2)::TT_Ex) of { TT_ex_intro _ _ _ _  -> (((coerce v4)::val->val->val) ((coerce (project 2((coerce v2)::TT_Ex)))::val) ((coerce (project 3((coerce v2)::TT_Ex)))::val) ) ; }))))))
 
-data TT_Or = forall arg. TT_or_intro_l arg arg arg | forall arg. TT_or_intro_r arg arg arg 
+data TT_Or = forall arg. TT_or_intro_l arg arg arg | forall arg. TT_or_intro_r arg arg arg
 
 instance Project TT_Or where
     project 2 (TT_or_intro_l  a0 a1 a2) = ((coerce a2)::val)
@@ -61,7 +61,7 @@ instance Project TT_Or where
 fn_OrElim :: val -> val -> val -> val -> val -> val -> val
 fn_OrElim = (\v0 -> (\v1 -> (\v2 -> (\v3 -> (\v4 -> (\v5 -> (case ((coerce v2)::TT_Or) of { TT_or_intro_l _ _ _  -> (((coerce v4)::val->val) ((coerce (project 2((coerce v2)::TT_Or)))::val) ) ; TT_or_intro_r _ _ _  -> (((coerce v5)::val->val) ((coerce (project 2((coerce v2)::TT_Or)))::val) ) ; })))))))
 
-data TT_And = forall arg. TT_and_intro arg arg arg arg 
+data TT_And = forall arg. TT_and_intro arg arg arg arg
 
 instance Project TT_And where
     project 3 (TT_and_intro  a0 a1 a2 a3) = ((coerce a3)::val)
@@ -74,7 +74,7 @@ instance Project TT_And where
 fn_AndElim :: val -> val -> val -> val -> val -> val
 fn_AndElim = (\v0 -> (\v1 -> (\v2 -> (\v3 -> (\v4 -> (case ((coerce v2)::TT_And) of { TT_and_intro _ _ _ _  -> (((coerce v4)::val->val->val) ((coerce (project 2((coerce v2)::TT_And)))::val) ((coerce (project 3((coerce v2)::TT_And)))::val) ) ; }))))))
 
-data TT_Eq = forall arg. TT_refl arg arg 
+data TT_Eq = forall arg. TT_refl arg arg
 
 instance Project TT_Eq where
     project 1 (TT_refl  a0 a1) = ((coerce a1)::val)
@@ -153,4 +153,3 @@ fn_trans = (\v0 -> (\v1 -> (\v2 -> (\v3 -> (\v4 -> (\v5 -> (((coerce fn_EqElim):
 
 fn_repl :: val -> val -> val -> val -> val -> val -> val
 fn_repl = (\v0 -> (\v1 -> (\v2 -> (\v3 -> (\v4 -> (\v5 -> (((coerce fn_EqElim)::val->val->val->val->val->val->val) ((coerce v0)::val) ((coerce v1)::val) ((coerce v2)::val) ((coerce v3)::val) ((coerce (\v6 -> (\v7 -> (((coerce v4)::val->val) ((coerce v6)::val) ))))::val) ((coerce v5)::val) )))))))
-

@@ -14,7 +14,7 @@ Constructions in \Coq{}~\cite{coq-manual}, or \Epigram{}'s
 ETT~\cite{epireloaded}.  This language, which I call
 $\source$~\cite{brady-thesis}, is an enriched lambda calculus, with
 the usual reduction rules, and properties of subject reduction, Church
-Rosser, and uniqueness of types up to conversion. 
+Rosser, and uniqueness of types up to conversion.
 More details on programming in $\source$ are given
 in~\cite{brady-thesis,dt-framework}.
 The strong
@@ -97,7 +97,7 @@ strongly normalising.
       \Gamma;\LET\:\vx\defq\ve_1\Hab\vS\proves\vT\Hab\Type_n\end{array}
       }
 {\Gamma\vdash\LET\:\vx\defq\ve_1\Hab\vS\SC\:\ve_2\Hab
-   \vT[\ve_1/\vx]}   
+   \vT[\ve_1/\vx]}
 %\Let\:\vx\Hab\vS\defq\ve_1\:\IN\:\vT}
 \hspace*{0.1in}\mathsf{Let}
 \\
@@ -118,7 +118,7 @@ strongly normalising.
 Inductive families \cite{dybjer94} are a form of simultaneously
 defined collection of algebraic data types (such as Haskell
 \texttt{data} declarations) which can be parametrised over
-\remph{values} as well as types.  An inductive family is declared 
+\remph{values} as well as types.  An inductive family is declared
 in a similar style to a Haskell GADT declaration~\cite{gadts}
 as
 follows, using the de Bruijn telescope notation, $\tx$, to indicate a
@@ -196,7 +196,7 @@ following operator:
 \vectelim\Hab & \fbind{\vA}{\Type}{\fbind{\vn}{\Nat}{
                 \fbind{\vv}{\Vect\:\vA\:\vn}{}}} \\
               & \fbind{\motive}{
-  \fbind{\vn}{\Nat}{\fbind{\vv}{\Vect\:\vA\:\vn}{\Type}}}{} 
+  \fbind{\vn}{\Nat}{\fbind{\vv}{\Vect\:\vA\:\vn}{\Type}}}{}
    \\
               & \fbind{\meth{\Vnil}}{\motive\:\Z\:(\Vnil\:\vA)}{} \\
               & (\meth{\Vcons}\Hab
@@ -204,7 +204,7 @@ following operator:
   \fbind{\vk}{\Nat}{\fbind{\vx}{\vA}{\fbind{\vxs}{\Vect\:\vA\:\vk}{}}} \\
   \fbind{\VV{ih}}{\motive\:\vk\:\vxs}{\motive\:(\suc\:\vk)\:
         (\Vcons\:\vA\:\vk\:\vx\:\vxs)})\to} \\
-              & \motive\:\vn\:\vv 
+              & \motive\:\vn\:\vv
 \end{array}
 \\
 \PA{\A\A\A\A\A\A}{
@@ -252,7 +252,7 @@ similar to a $\LET$ binding, but without any computational force,
 i.e. the bound names do not reduce:
 
 \DM{
-\vb ::= \ldots 
+\vb ::= \ldots
  \:\mid\: \hole{\vx}{\vt} \:\:(\mbox{hole binding}) \:\:
  \:\mid\: \guess{\vx}{\vt}{\vt} \:\:(\mbox{guess})
 }
@@ -303,14 +303,14 @@ below.
 
 %% \DM{
 %% \begin{array}{l@{\hg}l}
-%% \mbox{Claim} & 
+%% \mbox{Claim} &
 %% \Rule{\Gamma\proves\ve\Hab\vT\hg
 %% \Gamma\proves\vS\Hab\Type
 %% }
 %% {\Gamma\proves\hole{\vx}{\vS}\SC\ve\Hab\vT
 %% }
 %% \\
-%% \mbox{Fill} & 
+%% \mbox{Fill} &
 %% \Rule{\Gamma\proves\hole{\vx}{\vS}\SC\ve\Hab\vT\hg
 %% \Gamma\proves\vv\Hab\vS}
 %% {\Gamma\proves\guess{\vx}{\vS}{\vv}\SC\ve\Hab\vT}
@@ -326,5 +326,3 @@ below.
 
 %% \end{array}
 %% }
-
-

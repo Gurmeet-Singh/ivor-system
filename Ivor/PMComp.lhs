@@ -16,8 +16,8 @@ this. Let's just make it work first...)
 
 > data CS = CS Int
 
-> pmcomp :: Gamma Name -> 
->           Name -> TT Name -> PMFun Name -> 
+> pmcomp :: Gamma Name ->
+>           Name -> TT Name -> PMFun Name ->
 >           ([Name], TSimpleCase Name)
 > pmcomp ctxt n ty (PMFun arity ps)
 >       = pm' n (map mkPat ps)
@@ -42,7 +42,7 @@ this. Let's just make it work first...)
 > partition ctxt [] = []
 > partition ctxt ms@(m:_)
 >    | isVarPat m = let (vars, rest) = span isVarPat ms in
->                            (Vars vars):partition ctxt rest 
+>                            (Vars vars):partition ctxt rest
 >    | isConPat m = let (cons, rest) = span isConPat ms in
 >                            (Cons cons):(partition ctxt rest)
 > partition ctxt x = error "Can't happen PMComp partition"
@@ -59,7 +59,7 @@ clashes)
 > pnamestm [] tm = tm
 > pnamestm (x:xs) tm = substName x (P (PN x)) (Sc (pnamestm xs tm))
 
-> pnamesalt ns (TAlt c t args sc) 
+> pnamesalt ns (TAlt c t args sc)
 >     = TAlt c t (map PN args) (pnames (ns++args) sc)
 > pnamesalt ns (TConstAlt c sc) = TConstAlt c (pnames ns sc)
 > pnamesalt ns (TDefault sc) = TDefault (pnames ns sc)
@@ -87,7 +87,7 @@ rather than indices.)
 >          reOrder cs vs = let djs = (reverse.sort.(mapI 0 dj).transpose.allArgs) cs in
 >                              (pickAll (map snd djs) cs, pick (map snd djs) vs)
 >          pickAll _ [] = []
->          pickAll djs ((Clause args rest):cs) 
+>          pickAll djs ((Clause args rest):cs)
 >                       = (Clause (pick djs args) rest):(pickAll djs cs)
 >          allArgs [] = []
 >          allArgs ((Clause args rest):cs) = args:(allArgs cs)
@@ -106,24 +106,24 @@ Count the number of different constructor forms in xs
 >          mapI i f [] = []
 >          mapI i f (x:xs) = (f x, i):(mapI (i+1) f xs)
 
-> match :: Gamma Name -> 
+> match :: Gamma Name ->
 >          [TT Name] -> -- arguments
 >          [Clause] -> -- clauses
 >          TSimpleCase Name -> -- fallthrough (error case)
 >          State CS (TSimpleCase Name)
-> match ctxt [] ((Clause [] ret):_) err 
+> match ctxt [] ((Clause [] ret):_) err
 >           = return $ TTm ret -- run out of arguments
-> match ctxt vs cs err 
+> match ctxt vs cs err
 >       = mixture ctxt vs (partition ctxt cs) err
 
-> mixture :: Gamma Name -> 
+> mixture :: Gamma Name ->
 >            [TT Name] ->
 >            [Partition] -> TSimpleCase Name -> State CS (TSimpleCase Name)
 > mixture ctxt vs [] err = return err
-> mixture ctxt vs ((Cons ms):ps) err 
+> mixture ctxt vs ((Cons ms):ps) err
 >     = do fallthrough <- (mixture ctxt vs ps err)
 >          conRule ctxt vs ms fallthrough
-> mixture ctxt vs ((Vars ms):ps) err 
+> mixture ctxt vs ((Vars ms):ps) err
 >     = do fallthrough <- (mixture ctxt vs ps err)
 >          varRule ctxt vs ms fallthrough
 
@@ -137,11 +137,11 @@ patterns in ConType and Group
 
 > data Group = ConGroup ConType -- constructor
 >              -- arguments and rest of alternative for each instance
->                    [([Pattern Name], Clause)] 
+>                    [([Pattern Name], Clause)]
 
 > conRule :: Gamma Name -> [TT Name] ->
 >            [Clause] -> TSimpleCase Name -> State CS (TSimpleCase Name)
-> conRule ctxt (v:vs) cs err = 
+> conRule ctxt (v:vs) cs err =
 >    do groups <- groupCons cs
 >       caseGroups ctxt (v:vs) groups err
 
@@ -161,7 +161,7 @@ patterns in ConType and Group
 >                rest <- altGroups cs
 >                return (g:rest)
 
->         altGroup n i gs 
+>         altGroup n i gs
 >            = do (newArgs, nextCs) <- argsToAlt gs
 >                 matchCs <- match ctxt (map P newArgs++vs)
 >                                           nextCs err
@@ -180,7 +180,7 @@ new set of clauses to match.
 
 > argsToAlt :: [([Pattern Name], Clause)] -> State CS ([Name], [Clause])
 > argsToAlt [] = return ([],[])
-> argsToAlt rs@((r,m):_) 
+> argsToAlt rs@((r,m):_)
 >       = do newArgs <- getNewVars r
 >            -- generate new match alternatives, by combining the arguments
 >            -- matched on the constructor with the rest of the clause
@@ -211,8 +211,8 @@ new set of clauses to match.
 >             PCon i con _ args -> return $ addg con i args (Clause ps res) acc
 >             PConst cval -> return $ addConG cval (Clause ps res) acc
 >             pat -> fail $ show pat ++ " is not a constructor or constant (can't happen)"
-          
->          addg con i conargs res [] 
+
+>          addg con i conargs res []
 >                   = [ConGroup (CName con i) [(conargs, res)]]
 >          addg con i conargs res (g@(ConGroup (CName n j) cs):gs)
 >               | i == j = (ConGroup (CName n i) (cs ++ [(conargs, res)])):gs
@@ -262,9 +262,8 @@ case args of
 > varRule ctxt (v:vs) alts err = do
 >     let alts' = map (repVar v) alts
 >     match ctxt vs alts' err
->   where repVar v (Clause ((PVar p):ps) res) 
+>   where repVar v (Clause ((PVar p):ps) res)
 >                    = let nres = substName p v (Sc res) in
 >                      {- trace (show v ++ " for " ++ dbgshow p ++ " in " ++ show res ++ " gives " ++ show nres) $ -}
 >                          Clause ps nres
 >         repVar v (Clause (PTerm:ps) res) = Clause ps res
-

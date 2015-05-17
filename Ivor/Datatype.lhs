@@ -20,7 +20,7 @@
 
 Elaborated version with elimination rule and iota schemes.
 
-> data RawDatatype = 
+> data RawDatatype =
 >	   RData { rtycon :: (Name,Raw),
 >	           rdatacons :: [(Name,Raw)],
 >                  rnum_params :: Int,
@@ -56,7 +56,7 @@ schemes, and returns a DataType, ready for compilation to entries in
 the context and an executable elimination rule.
 
 > checkType :: Gamma Name -> RawDatatype -> IvorM (Datatype Name)
-> checkType gamma (RData (ty,kind) cons numps (er,erty) (cr,crty) eschemes cschemes) = 
+> checkType gamma (RData (ty,kind) cons numps (er,erty) (cr,crty) eschemes cschemes) =
 >     do (kv, _) <- typecheck gamma kind
 >        let erdata = Elims er cr (map fst cons)
 >	 let gamma' = extend gamma (ty,G (TCon (arity gamma kv) erdata) kv defplicit)
@@ -70,7 +70,7 @@ the context and an executable elimination rule.
 >                    (er,ev) (cr,cv) (Just esch) (Just csch) eschemes cschemes)
 
 > checkTypeNoElim :: Gamma Name -> RawDatatype -> IvorM (Datatype Name)
-> checkTypeNoElim gamma (RData (ty,kind) cons numps (er,erty) (cr,crty) eschemes cschemes) = 
+> checkTypeNoElim gamma (RData (ty,kind) cons numps (er,erty) (cr,crty) eschemes cschemes) =
 >     do (kv, _) <- typecheck gamma kind
 >        let erdata = Elims er cr (map fst cons)
 >	 let gamma' = extend gamma (ty,G (TCon (arity gamma kv) erdata) kv defplicit)
@@ -92,7 +92,7 @@ the context and an executable elimination rule.
 >    where forcepos cty = let nms = nub (guardedNames [] cty) in
 >                             map (argpos 0 cty) nms
 
->          argpos i (RBind x _ t) n 
+>          argpos i (RBind x _ t) n
 >                     | x == n = i
 >                     | otherwise = argpos (i+1) t n
 >          guardedNames ns (RBind n _ t) = guardedNames (n:ns) t
@@ -122,7 +122,7 @@ we get V 0 = pn ... V n = p0
 then pattern variables are retrieved by projection with Proj in typechecked t.
 
 > checkScheme :: Gamma Name -> Name -> RawScheme -> IvorM (Scheme Name)
-> checkScheme gamma n (RSch pats (RWRet ret)) = 
+> checkScheme gamma n (RSch pats (RWRet ret)) =
 >     do let ps = map (mkPat gamma) pats
 >	 let rhsvars = getPatVars gamma ps
 >        let rhs = substVars gamma n rhsvars ret
@@ -161,7 +161,7 @@ Make a pattern from a raw term. Anything weird, just make it a "PTerm".
 > mkPat gam x = error $ "Can't make a pattern from " ++ show x
 > -}
 
-Get the pattern variables from the patterns, and work out what the projection 
+Get the pattern variables from the patterns, and work out what the projection
 function for each name is.
 
 > getPatVars :: Gamma Name ->[Pattern Name] -> [(Name, TT Name)]

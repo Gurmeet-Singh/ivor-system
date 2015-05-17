@@ -10,7 +10,7 @@ Datatype Nat {
    Scheme (S k),P,mz,ms -> ms k (natElim k P mz ms)
 };
 
-holey_plus = [m:Nat][n:Nat](?H:Nat. 
+holey_plus = [m:Nat][n:Nat](?H:Nat.
 	   (natElim n ([n:Nat]Nat) H ([k:Nat][ih:Nat](S ih))));
 H. try m;
 H. solve;
@@ -32,7 +32,7 @@ H. try plus x y;
 H. solve;
 y. try n;
 y. solve;
-x. try n; 
+x. try n;
 x. solve;
 double. solve;
 Lift;
@@ -62,7 +62,7 @@ Datatype Vect {
                           (P (S k) (Vcons A k a v)))
                    (P n v),
     Scheme A,O,(Vnil A),P,mnil,mcons -> mnil
-    Scheme A,(S k),(Vcons A k a v),P,mnil,mcons 
+    Scheme A,(S k),(Vcons A k a v),P,mnil,mcons
           -> mcons k a v (VectElim A k v P mnil mcons)
 };
 
@@ -70,7 +70,7 @@ vectFold = [A:*][B:*][n:Nat][v:Vect A n][empty:B][tail:(a:A)(b:B)B]
 	 (VectElim A n v ([n:Nat][v:Vect A n]B) empty
 	     ([k:Nat][a:A][v:Vect A k][ih:B](tail a ih)));
 
-Eval VectElim Nat O (Vnil Nat) ([n:Nat][v:Vect Nat n]Nat) 
+Eval VectElim Nat O (Vnil Nat) ([n:Nat][v:Vect Nat n]Nat)
     (S O) ([k:Nat][a:Nat][v:Vect Nat k][ih:Nat](S ih));
 
 Eval VectElim Nat (S (S O)) (Vcons Nat (S O) (S O) (Vcons Nat O (S O) (Vnil Nat)))

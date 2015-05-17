@@ -326,4 +326,3 @@ VAL _EVM_natElim(VAL v0,VAL v1,VAL v2,VAL v3) {
     return NULL;
     }
 }
-

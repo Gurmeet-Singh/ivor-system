@@ -10,7 +10,7 @@
 Raw terms are those read in directly from the user, and may be badly typed.
 (Maybe add labels later)
 
-> data Raw 
+> data Raw
 >     = Var Name
 >     | RApp Raw Raw
 >     | RBind Name (Binder Raw) Raw
@@ -18,7 +18,7 @@ Raw terms are those read in directly from the user, and may be badly typed.
 >     | RAnnot String -- Debugging hack
 >   deriving Eq
 
-TT represents terms in the core type theory, parametrised by the 
+TT represents terms in the core type theory, parametrised by the
 representation of the names
 
 > data TT n
@@ -46,7 +46,7 @@ Constants
 > data Binder n = B (Bind n) n
 >    deriving (Show, Eq)
 
-> data Bind n 
+> data Bind n
 >     = Lambda
 >     | Pi
 >     | Let n
@@ -81,9 +81,9 @@ Pattern represents the patterns used to define iota schemes.
 UN covers names defined by users, MN covers names invented by the system.
 This keeps both namespaces separate.
 
-> data Name 
+> data Name
 >     = UN String
->     | MN (String,Int) 
+>     | MN (String,Int)
 >   deriving Eq
 
 ====================== Functors ===============================
@@ -130,7 +130,7 @@ Each V is processed with a function taking the context and the index.
 >   where
 >     v' ctx (V i) = f (ctx,i)
 >     v' ctx (App f' a) = (App (v' ctx f') (v' ctx a))
->     v' ctx (Bind n b (Sc sc)) = (Bind n (fmap (v' ctx) b) 
+>     v' ctx (Bind n b (Sc sc)) = (Bind n (fmap (v' ctx) b)
 >			          (Sc (v' (n:ctx) sc)))
 >     v' ctx (Proj i x) = Proj i (v' ctx x)
 >     v' ctx x = x
@@ -160,28 +160,28 @@ we get a duff term when we go back to the indexed version.
 >        b' <- uniqifyAllStateB b
 >        sc' <- uniqifyAllState sc
 >        return (Bind n' b' (Sc sc'))
-> uniqifyAllState (App f a) = 
+> uniqifyAllState (App f a) =
 >     do f' <- uniqifyAllState f
 >        a' <- uniqifyAllState a
 >        return (App f' a')
-> uniqifyAllState (Proj i t) = 
+> uniqifyAllState (Proj i t) =
 >     do t' <- uniqifyAllState t
 >        return (Proj i t')
 > uniqifyAllState x = return $ x
-> uniqifyAllStateB (B Lambda ty) = 
+> uniqifyAllStateB (B Lambda ty) =
 >     do ty' <- uniqifyAllState ty
 >        return (B Lambda ty')
-> uniqifyAllStateB (B Pi ty) = 
+> uniqifyAllStateB (B Pi ty) =
 >     do ty' <- uniqifyAllState ty
 >        return (B Pi ty')
-> uniqifyAllStateB (B Hole ty) = 
+> uniqifyAllStateB (B Hole ty) =
 >     do ty' <- uniqifyAllState ty
 >        return (B Hole ty')
-> uniqifyAllStateB (B (Let v) ty) = 
+> uniqifyAllStateB (B (Let v) ty) =
 >     do ty' <- uniqifyAllState ty
 >        v' <- uniqifyAllState v
 >        return (B (Let v') ty')
-> uniqifyAllStateB (B (Guess v) ty) = 
+> uniqifyAllStateB (B (Guess v) ty) =
 >     do ty' <- uniqifyAllState ty
 >        v' <- uniqifyAllState v
 >        return (B (Guess v') ty')
@@ -217,7 +217,7 @@ Return all the names used in a scope
 > getNames (Sc x) = nub $ p' x where
 >     p' (P x) = [x]
 >     p' (App f' a) = (p' f')++(p' a)
->     p' (Bind n b (Sc sc)) 
+>     p' (Bind n b (Sc sc))
 >      | scnames <- p' sc = (scnames \\ [n]) ++ pb' b
 >     p' (Proj i x) = p' x
 >     p' x = []
@@ -234,7 +234,7 @@ with de Bruijn indices or levels. We need a newtype Named n.
 >     p' (App f' a) = (App (p' f') (p' a))
 >     p' (Bind n b (Sc sc)) = (Bind n (fmap p' b) (Sc (p' sc)))
 >      --   | n == p = (Bind n (fmap p' b) (Sc sc))
->      --   | otherwise 
+>      --   | otherwise
 >     p' (Proj i x) = Proj i (p' x)
 >     p' x = x
 
@@ -247,7 +247,7 @@ Probably hopelessly inefficient.
 >     p' (App f' a) = (App (p' f') (p' a))
 >     p' (Bind n b (Sc sc)) = (Bind n (fmap p' b) (Sc (p' sc)))
 >      --   | n == p = (Bind n (fmap p' b) (Sc sc))
->      --   | otherwise 
+>      --   | otherwise
 >     p' (Proj i x) = Proj i (p' x)
 >     p' x = x
 
@@ -341,13 +341,13 @@ Bind a list of things
 > instance Forget Raw String where
 >     forget (Var n) = forget n
 >     forget (RApp f a) = "(" ++ forget f ++ " " ++ forget a ++ ")"
->     forget (RBind n (B Lambda t) sc) = "["++forget n ++":"++forget t++"]" 
+>     forget (RBind n (B Lambda t) sc) = "["++forget n ++":"++forget t++"]"
 >				 ++ forget sc
->     forget (RBind n (B Pi t) sc) = "("++forget n ++":"++forget t++")" 
+>     forget (RBind n (B Pi t) sc) = "("++forget n ++":"++forget t++")"
 >				 ++ forget sc
 >     forget (RBind n (B (Let v) t) sc) = "let "++forget n ++":"++forget t
 >                                 ++"=" ++ forget v ++ " in " ++ forget sc
->     forget (RBind n (B Hole t) sc) = "?"++forget n ++":"++forget t++"." 
+>     forget (RBind n (B Hole t) sc) = "?"++forget n ++":"++forget t++"."
 >				 ++ forget sc
 >     forget (RBind n (B (Guess v) t) sc) = "try "++forget n ++":"++forget t
 >                                 ++"=" ++ forget v ++ " in " ++ forget sc
@@ -406,4 +406,3 @@ Some handy gadgets for Raw terms
 
 > getrettype (RBind n (B Pi _) sc) = getrettype sc
 > getrettype x = x
-

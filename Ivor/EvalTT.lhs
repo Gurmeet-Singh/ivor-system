@@ -38,35 +38,32 @@
 > -- |Reduce a term and its type to Normal Form (using new evaluator, not
 > -- reducing given names)
 > evalnewWithout :: Context -> Term -> [Name] -> Term
-> evalnewWithout (Ctxt st) (Term (tm,ty)) ns 
+> evalnewWithout (Ctxt st) (Term (tm,ty)) ns
 >                    = Term (tidyNames (eval_nf_without (defs st) tm ns),
 >                            tidyNames (eval_nf_without (defs st) ty ns))
 
 > -- |Reduce a term and its type to Normal Form (using new evaluator, reducing
 > -- given names a maximum number of times)
 > evalnewLimit :: Context -> Term -> [(Name, Int)] -> Term
-> evalnewLimit (Ctxt st) (Term (tm,ty)) ns 
+> evalnewLimit (Ctxt st) (Term (tm,ty)) ns
 >                  = Term (eval_nf_limit (defs st) tm ns Nothing,
 >                          eval_nf_limit (defs st) ty ns Nothing)
 
 Specialise a pattern matching definition - support for 'spec'
 
-> specialise :: Context -> PMFun Name -> 
+> specialise :: Context -> PMFun Name ->
 >               [(Name, ([Int], Int))] -> -- functions with static args
 >               [Name] -> -- frozen names
 >               (PMFun Name, Context, [Name]) -- also, new names
 > specialise ctxt (PMFun ar ps) statics frozen = sp ctxt ps [] []
 >   where
 >    sp ctxt [] names acc = (PMFun ar (reverse acc), ctxt, names)
->    sp ctxt@(Ctxt st) (p@(Sch args env ret):ps) names acc 
->         = let ret' = eval_nf_limit (defs st) ret 
+>    sp ctxt@(Ctxt st) (p@(Sch args env ret):ps) names acc
+>         = let ret' = eval_nf_limit (defs st) ret
 >                          (map (\x -> (x,0)) frozen)
 >                          (Just statics) in
->           sp ctxt ps names (Sch args env ret' : acc) 
+>           sp ctxt ps names (Sch args env ret' : acc)
 
-    sp ctxt (p@(PWithClause eq args scr pats):ps) names acc 
+    sp ctxt (p@(PWithClause eq args scr pats):ps) names acc
          = let (pats', ctxt', names') = specialise ctxt pats statics frozen in
-               sp ctxt' ps names' (p:acc) 
-
-
-
+               sp ctxt' ps names' (p:acc)

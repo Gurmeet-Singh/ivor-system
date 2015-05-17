@@ -432,4 +432,3 @@ If the given file is already loaded, do nothing.
 > 		     Nothing -> "/tmp"
 > 		     (Just d) -> d
 >               openTempFile dir "humett.out"
-

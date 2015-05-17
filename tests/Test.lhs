@@ -59,7 +59,7 @@
 >                   "patt5" ~: "3-1" ~: "S (S O)" ~=? patt5 patt,
 >                   "patt6" ~: "envlookup" ~: "false" ~=? patt6 patt]
 
-> main = do 
+> main = do
 >    t <- tests
 >    counts <- runTestTT t
 >    if errors counts + failures counts == 0

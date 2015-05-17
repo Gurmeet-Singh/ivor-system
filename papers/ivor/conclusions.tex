@@ -3,11 +3,11 @@
 The ability to extend a theorem prover with user defined tactics has
 its roots in Robin Milner's LCF~\cite{lcf-milner}. This introduced the
 programming language ML to allow users to write tactics; we follow the
-LCF approach in exposing the tactic engine as an API. 
+LCF approach in exposing the tactic engine as an API.
 %However, unlike
 %other systems, we have not treated the theorem prover as an end in
 %itself, but intend to expose the technology to any Haskell application
-%which may need it.  
+%which may need it.
 The implementation of \Ivor{} is based on the
 presentation of \Oleg{} in Conor McBride's
 thesis~\cite{mcbride-thesis}. We use implementation
@@ -25,13 +25,13 @@ $\Omega$mega~\cite{sheard-langfuture}. While \Ivor{} emphasises
 interactive theorem proving, $\Omega$mega emphasises programming but
 nevertheless allows more precise types to be given to programs through
 Generalised Algebraic Data Types~\cite{gadts} and extensible
-kinds. 
+kinds.
 
 Other theorem provers such as \Coq{}~\cite{coq-manual},
 \Agda{}~\cite{agda} and Isabelle~\cite{isabelle} have varying degrees
-of extensibility. 
+of extensibility.
 %The interface design largely follows that of
-%\Coq{}. 
+%\Coq{}.
 \Coq{} includes a high level domain specific language for
 combining tactics and creating new tactics, along the lines of the
 tactic combinators presented in section \ref{combinators}. This
@@ -41,7 +41,7 @@ require extending \Coq{} itself. Using a
 DSEL~\cite{hudak-edsl} as provided by \Ivor{} gives complete
 flexibility in the construction of tactics, and allows a close
 relationship between the tactics and the structures on which they
-operate (e.g. \hdecl{Raw}). 
+operate (e.g. \hdecl{Raw}).
 %In future, it may
 %be worth exploring automatic translation between \Ivor{} and other
 %theorem provers.
@@ -54,7 +54,7 @@ but unlike \Ivor{} is not based on a dependent type theory.
 There is therefore no \remph{proof term} associated with an Isabelle
 proof --- the proof term gives a derivation tree for the
 proof, allowing easy and independent rechecking without referring to
-the tactics used to build the proof. 
+the tactics used to build the proof.
 
 The implementation of \Funl{} allows a theorem prover to be attached
 to the language in a straightforward way, using \Ivor{}'s tactics
@@ -106,7 +106,7 @@ Development of the library has been driven by the requirements of
 our research into Hume~\cite{Hume-GPCE}, a resource aware functional
 language. We are investigating the use of dependent types in
 representing and verifying resource bounded functional
-programs~\cite{dt-framework}. 
+programs~\cite{dt-framework}.
 For this, automatic generation of
 injectivity and disjointness lemmas for constructors will be
 essential~\cite{concon}.

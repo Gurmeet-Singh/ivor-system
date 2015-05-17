@@ -1,6 +1,6 @@
 > {-# OPTIONS_GHC -fglasgow-exts #-}
 
-> -- | 
+> -- |
 > -- Module      : Ivor.Plugin
 > -- Copyright   : Edwin Brady
 > -- Licence     : BSD-style (see LICENSE in the distribution)
@@ -8,7 +8,7 @@
 > -- Maintainer  : eb@dcs.st-and.ac.uk
 > -- Stability   : experimental
 > -- Portability : portable
-> -- 
+> --
 > -- Plugin loader
 
 > module Ivor.Plugin(Ivor.Plugin.load) where
@@ -33,14 +33,14 @@
 > -- which adds new user defined commands (which may need to do some setting up themselves, hence the IO)
 > -- Returns the new context and the extra parsing rules and commands, if any.
 
-> load :: FilePath -> Context -> IO (Context, 
+> load :: FilePath -> Context -> IO (Context,
 >               Maybe (Parser ViewTerm),
 >               Maybe (ShellState -> IO ShellState),
 >               Maybe (IO [(String, String -> Context -> IO (String, Context))]))
 
 > load fn ctxt = fail "Currently disabled"
 
--- > load fn ctxt = do 
+-- > load fn ctxt = do
 -- >          objIn <- compilePlugin fn
 -- >          obj <- case objIn of
 -- >                    Left errs -> fail errs
@@ -72,7 +72,7 @@
 -- files
 
 -- > compilePlugin :: FilePath -> IO (Either String FilePath)
--- > compilePlugin hs 
+-- > compilePlugin hs
 -- >     | isExt ".hs" hs || isExt ".lhs" hs =
 -- >         do status <- makeAll hs []
 -- >            case status of

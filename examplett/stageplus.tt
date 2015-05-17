@@ -36,4 +36,3 @@ fill (S O);
 intros;
 fill (mult x k_IH);
 Qed;
-

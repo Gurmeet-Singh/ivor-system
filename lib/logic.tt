@@ -1,6 +1,6 @@
 Data And (A:*)(B:*) : * = and_intro : (a:A)(b:B)(And A B);
 
-Data Or (A:*)(B:*) : * 
+Data Or (A:*)(B:*) : *
      = or_intro_l : (a:A)(Or A B)
      | or_intro_r : (b:B)(Or A B);
 

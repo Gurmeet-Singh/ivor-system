@@ -7,7 +7,7 @@ intros;
 fill n;
 intros;
 refine S;
-fill k_IH n0; 
+fill k_IH n0;
 Qed;
 
 adderType : (m:Nat)(n:Nat)*;
@@ -48,7 +48,7 @@ Qed;
 
 testval = fact (S (S (S (S (S (S (S (S (S O)))))))));
 
-Data Vect (A:*):(n:Nat)* 
+Data Vect (A:*):(n:Nat)*
     = vnil:Vect A O
     | vcons:(k:Nat)(x:A)(xs:Vect A k)Vect A (S k);
 
@@ -62,4 +62,3 @@ Qed;
 
 testvect2 = vcons _ _ (S O) (vcons _ _ (S (S (S O))) (vnil Nat));
 testval2 = vectsum _ testvect2;
-

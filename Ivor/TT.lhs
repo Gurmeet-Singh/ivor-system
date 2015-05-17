@@ -14,7 +14,7 @@
 >               Ivor.TT.compile,
 >               module Ivor.CtxtTT,
 >               -- * Exported view of terms
->               module VTerm, 
+>               module VTerm,
 >               -- * Definitions and Theorems
 >               addDef,addTypedDef,
 >               addAxiom,declare,declareData,
@@ -191,7 +191,7 @@
 > mkRawClause :: PClause -> RawScheme
 > mkRawClause (PClause args _ ret) =
 >     RSch (map forget args) (RWRet (forget ret))
-> mkRawClause (PWithClause prf args scr (Patterns rest)) = 
+> mkRawClause (PWithClause prf args scr (Patterns rest)) =
 >     RSch (map forget args) (RWith prf (forget scr) (map mkRawClause rest))
 
 > -- ^ Convert a term to matchable pattern form; i.e. the only names allowed
@@ -212,7 +212,7 @@
 >            Just (DCon _ _ _) -> True -- since it's a constructor
 >            Nothing -> True -- since it' a variable
 >            _ -> False
->            
+>
 
  patternDef gam n ty pmf t g = PatternDef pmf t g (pmcomp gam n ty pmf)
 
@@ -239,17 +239,17 @@
 >         inty <- raw ty
 >         let unused = defplicit
 >         let (Patterns clauses) = pats
->         (pmdefs, newnames, tot) 
+>         (pmdefs, newnames, tot)
 >               <- tt $ checkDef ndefs n inty (map mkRawClause clauses)
 >                            (not (elem Ivor.TT.Partial opts))
 >                            (not (elem GenRec opts))
 >                            (getSpec opts)
 >                            (getSpecSt opts)
->         (ndefs',vnewnames) 
+>         (ndefs',vnewnames)
 >                <- if (null newnames) then return (ndefs, [])
->                      else do when (not (Holey `elem` opts)) $ 
+>                      else do when (not (Holey `elem` opts)) $
 >                                    ttfail "No metavariables allowed"
->                              let vnew = map (\ (n,t) -> 
+>                              let vnew = map (\ (n,t) ->
 >                                              (n, view (Term (t,Ind TTCore.Star)))) newnames
 >                              let ngam = foldl (\g (n, t) ->
 >                                                  extend g (n, G Unreducible t unused))
@@ -258,7 +258,7 @@
 >         newdefs <- insertAll pmdefs ndefs' tot unused
 >         return (Ctxt st { defs = newdefs }, vnewnames)
 >   where insertAll [] gam tot unused = return gam
->         insertAll ((nm, def, ty):xs) gam tot unused = 
+>         insertAll ((nm, def, ty):xs) gam tot unused =
 >             do gam' <- gInsert nm (G (patternDef gam nm ty def tot (gen nm)) ty unused) gam
 >                insertAll xs gam' tot unused
 >         gen nm = nm /= n -- generated if it's not the provided name.
@@ -276,7 +276,7 @@
 >         -> [(Name, ([Int], Int))] -- ^ Functions and static arguments
 >         -> [Name] -- ^ Frozen names
 >         -> TTM Context
-> spec ctxt@(Ctxt st) fn statics frozen = 
+> spec ctxt@(Ctxt st) fn statics frozen =
 
 Look up the name, specialise it, then add the new pattern definition to the
 context
@@ -352,7 +352,7 @@ do let olddefs = defs st
 >                              "(P:*)(meth_general:(p:P)P)P"
 >          let tmp = defs tmpctxt
 >          let ctxt = defs st
->          general <- raw $ "[P:*][meth_general:(p:P)P](meth_general (" ++ 
+>          general <- raw $ "[P:*][meth_general:(p:P)P](meth_general (" ++
 >                            show n ++ " P meth_general))"
 >          case (typecheck tmp general) of
 >              (Right (v,t)) -> do
@@ -790,7 +790,7 @@ Give a parseable but ugly representation of a term.
 > -- about the difference between parameters and indices; that information
 > -- is discarded after the elimination rule is constructed.
 > getInductive :: Context -> Name -> TTM Inductive
-> getInductive (Ctxt st) n 
+> getInductive (Ctxt st) n
 >     = case glookup n (defs st) of
 >         Just (TCon _ (Elims _ _ cons), ty) ->
 >             -- reconstruct the 'Inductive' from types of ty and cons
@@ -810,16 +810,16 @@ Give a parseable but ugly representation of a term.
 > getPatternDef (Ctxt st) n
 >     = case glookup n (defs st) of
 >           Just ((PatternDef pmf _ _ _),ty) ->
->               return $ (view (Term (ty, Ind TTCore.Star)), 
+>               return $ (view (Term (ty, Ind TTCore.Star)),
 >                         Patterns (map mkPat (getPats pmf)))
 >           Just ((Fun _ ind), ty) ->
 >               return $ (view (Term (ty, Ind TTCore.Star)),
 >                         Patterns [mkCAFpat ind])
 >           _ -> ttfail "Not a pattern matching definition"
 >    where getPats (PMFun _ ps) = ps
->          mkPat (Sch ps bs ret) 
->               = PClause (map viewPat ps) 
->                         (map (\ (n, B _ t) -> 
+>          mkPat (Sch ps bs ret)
+>               = PClause (map viewPat ps)
+>                         (map (\ (n, B _ t) ->
 >                            (n, (view (Term (Ind t, (Ind TTCore.Star)))))) bs)
 >                 (view (Term (ret, (Ind TTCore.Star))))
 >          mkCAFpat tm = PClause [] [] (view (Term (tm, (Ind TTCore.Star))))
@@ -828,13 +828,13 @@ Give a parseable but ugly representation of a term.
 >          viewPat (PConst c) = Constant c
 >          viewPat _ = Placeholder
 
-> getPatternDefCore :: Context -> Name -> 
+> getPatternDefCore :: Context -> Name ->
 >                      TTM (PMFun Name, Bool, Bool, Indexed Name, Plicity)
 > getPatternDefCore (Ctxt st) n
 >     = case glookupall n (defs st) of
->           Just ((PatternDef pmf t g _),ty,plicit) -> 
+>           Just ((PatternDef pmf t g _),ty,plicit) ->
 >               return (pmf, t, g, ty, plicit)
->           Just ((Fun _ ind), ty, plicit) -> 
+>           Just ((Fun _ ind), ty, plicit) ->
 >               return (PMFun 0 [Sch [] [] ind], True, False, ty, plicit)
 >           _ -> ttfail "Not a pattern matching definition"
 
@@ -869,7 +869,7 @@ Give a parseable but ugly representation of a term.
 > -- |Get all the pattern matching definitions in the context.
 > -- Also returns CAFs (i.e. 0 argument functions)
 > getAllPatternDefs :: Context -> [(Name,(ViewTerm, Patterns))]
-> getAllPatternDefs ctxt 
+> getAllPatternDefs ctxt
 >        = getPD (map fst (getAllTypes ctxt))
 >   where getPD [] = []
 >         getPD (x:xs) = case (getPatternDef ctxt x) of
@@ -886,7 +886,7 @@ Give a parseable but ugly representation of a term.
 
 > -- |Get all the inductive type definitions in the context.
 > getAllInductives :: Context -> [(Name,Inductive)]
-> getAllInductives ctxt 
+> getAllInductives ctxt
 >        = getI (map fst (getAllTypes ctxt))
 >   where getI [] = []
 >         getI (x:xs) = case (getInductive ctxt x) of
@@ -907,7 +907,7 @@ Give a parseable but ugly representation of a term.
 
 > -- |Find out what type of variable the given name is
 > nameType :: Context -> Name -> TTM NameType
-> nameType (Ctxt st) n 
+> nameType (Ctxt st) n
 >     = case glookup n (defs st) of
 >         Just ((DCon _ _ _), _) -> return DataCon
 >         Just ((TCon _ _), _) -> return TypeCon
@@ -1003,8 +1003,8 @@ Get the actions performed by the last tactic
 >               Just x -> return x
 >               Nothing -> ttfail "No such goal"
 
-> getHoleTerm gam hs tm = (getctxt hs, 
->                          Term (normaliseEnv hs (emptyGam) (binderType tm), 
+> getHoleTerm gam hs tm = (getctxt hs,
+>                          Term (normaliseEnv hs (emptyGam) (binderType tm),
 >                                Ind TTCore.Star))
 >    where getctxt [] = []
 >          getctxt ((n,B _ ty):xs) = (n,Term (Ind ty,Ind TTCore.Star)):
@@ -1094,7 +1094,7 @@ Tactics
 >              let (Gam olddefs) = remove name (defs st)
 >              defs' <- gInsert name val (defs st)
 >              let newdefs = setRec name isrec defs'
->              return $ Ctxt st { proofstate = Nothing, 
+>              return $ Ctxt st { proofstate = Nothing,
 >                             defs = newdefs } -- Gam (newdef:olddefs) }
 >            Nothing -> ttfail "No proof in progress"
 >  where rec nm = case lookupval nm (defs st) of
@@ -1591,5 +1591,3 @@ FIXME: This function is horrible. Redo it at some point...
 >            -> IO ()
 > compile (Ctxt st) froot
 >     = fail "No compiler at the minute"
-
-

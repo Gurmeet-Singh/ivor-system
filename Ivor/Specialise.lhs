@@ -16,7 +16,7 @@
 
 Specialise pattern matching definitions
 
- specialise :: Context -> Patterns -> 
+ specialise :: Context -> Patterns ->
                [(Name, ([Int], Int))] -> -- functions with static args
                [Name] -> -- frozen names
                (Patterns, Context, [Name]) -- also, new names

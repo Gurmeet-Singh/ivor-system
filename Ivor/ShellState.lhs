@@ -1,6 +1,6 @@
 > {-# OPTIONS_GHC -fglasgow-exts #-}
 
-> -- | 
+> -- |
 > -- Module      : Ivor.Shell
 > -- Copyright   : Edwin Brady
 > -- Licence     : BSD-style (see LICENSE in the distribution)
@@ -8,7 +8,7 @@
 > -- Maintainer  : eb@dcs.st-and.ac.uk
 > -- Stability   : experimental
 > -- Portability : non-portable
-> -- 
+> --
 > -- Shell interface to theorem prover
 
 > module Ivor.ShellState(ShellState(..)) where
@@ -30,5 +30,3 @@
 >                          -- search path for modules to load
 >                          modulePath :: [FilePath]
 >                          }
-
-

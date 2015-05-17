@@ -1,7 +1,7 @@
 Load "basics.tt";
 Load "fin.tt";
 
-Data Vect (A:*):(n:Nat)* 
+Data Vect (A:*):(n:Nat)*
     = vnil:Vect A O
     | vcons:(k:Nat)(x:A)(xs:Vect A k)Vect A (S k);
 

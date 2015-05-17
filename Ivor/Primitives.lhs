@@ -1,6 +1,6 @@
 > {-# OPTIONS_GHC -fglasgow-exts #-}
 
-> -- | 
+> -- |
 > -- Module      : Ivor.Primitives
 > -- Copyright   : Edwin Brady
 > -- Licence     : BSD-style (see LICENSE in the distribution)
@@ -8,14 +8,14 @@
 > -- Maintainer  : eb@dcs.st-and.ac.uk
 > -- Stability   : experimental
 > -- Portability : non-portable
-> -- 
+> --
 > -- Some basic primitive types. Importing this module adds instances
 > -- of 'ViewConst' for Int, Float and String (Float is represented by
 > -- Haskell Double). 'addPrimitives' should be
 > -- used to add these type constructors to the context.
 
-> module Ivor.Primitives(addPrimitives, parsePrimitives, 
->                          parsePrimTerm) 
+> module Ivor.Primitives(addPrimitives, parsePrimitives,
+>                          parsePrimTerm)
 >     where
 
 > import Ivor.TT hiding (try)
@@ -62,33 +62,33 @@
 > addPrimitives c = do c <- addPrimitive c (name "Int")
 >                      c <- addPrimitive c (name "Float")
 >                      c <- addPrimitive c (name "String")
->                      c <- addBinOp c (name "addInt") ((+)::Int->Int->Int) 
+>                      c <- addBinOp c (name "addInt") ((+)::Int->Int->Int)
 >                               "(x:Int)(y:Int)Int"
->                      c <- addBinOp c (name "subInt") ((-)::Int->Int->Int) 
+>                      c <- addBinOp c (name "subInt") ((-)::Int->Int->Int)
 >                               "(x:Int)(y:Int)Int"
->                      c <- addBinOp c (name "multInt") ((*)::Int->Int->Int) 
+>                      c <- addBinOp c (name "multInt") ((*)::Int->Int->Int)
 >                               "(x:Int)(y:Int)Int"
->                      c <- addBinOp c (name "divInt") 
->                               ((div)::Int->Int->Int) 
+>                      c <- addBinOp c (name "divInt")
+>                               ((div)::Int->Int->Int)
 >                               "(x:Int)(y:Int)Int"
->                      c <- addBinOp c (name "addFloat") 
->                               ((+)::Double->Double->Double) 
+>                      c <- addBinOp c (name "addFloat")
+>                               ((+)::Double->Double->Double)
 >                               "(x:Float)(y:Float)Float"
->                      c <- addBinOp c (name "subFloat") 
->                               ((-)::Double->Double->Double) 
+>                      c <- addBinOp c (name "subFloat")
+>                               ((-)::Double->Double->Double)
 >                               "(x:Float)(y:Float)Float"
->                      c <- addBinOp c (name "multFloat") 
->                                ((*)::Double->Double->Double) 
+>                      c <- addBinOp c (name "multFloat")
+>                                ((*)::Double->Double->Double)
 >                               "(x:Float)(y:Float)Float"
->                      c <- addBinOp c (name "divFloat") 
->                                ((/)::Double->Double->Double) 
+>                      c <- addBinOp c (name "divFloat")
+>                                ((/)::Double->Double->Double)
 >                               "(x:Float)(y:Float)Float"
->                      c <- addBinOp c (name "concat") 
->                               ((++)::String->String->String) 
+>                      c <- addBinOp c (name "concat")
+>                               ((++)::String->String->String)
 >                               "(x:String)(y:String)String"
 >                      c <- addPrimFn c (name "intToNat") intToNat
 >                               "(x:Int)Nat"
->                      c <- addPrimFn c (name "intToString") 
+>                      c <- addPrimFn c (name "intToString")
 >                               intToString
 >                               "(x:Int)String"
 >                      c <- addExternalFn c (name "stringEq") 2
@@ -104,9 +104,9 @@
 > intToString n = Constant (show n)
 
 > stringEq :: [ViewTerm] -> Maybe ViewTerm
-> stringEq [Constant x, Constant y] 
+> stringEq [Constant x, Constant y]
 >     = case cast x of
->          Just x' -> if (x' == y) 
+>          Just x' -> if (x' == y)
 >                       then Just $ Name DataCon (name "true")
 >                       else Just $ Name DataCon (name "false")
 >          _ -> Just $ Name DataCon (name "false")
@@ -129,9 +129,7 @@
 > -- | Parse a term including primitives
 > parsePrimTerm :: String -> TTM ViewTerm
 > parsePrimTerm str
->     = case parse (do t <- pTerm (Just parsePrimitives) ; eof ; return t) 
+>     = case parse (do t <- pTerm (Just parsePrimitives) ; eof ; return t)
 >                  "(input)" str of
 >           Left err -> fail (show err)
 >           Right tm -> return tm
-
- 

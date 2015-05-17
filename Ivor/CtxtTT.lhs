@@ -39,7 +39,7 @@
 > getError (ICantUnify l r) = CantUnify (view (Term (l, Ind TTCore.Star))) (view (Term (r, Ind TTCore.Star)))
 > getError (INotConvertible l r) = NotConvertible (view (Term (l, Ind TTCore.Star))) (view (Term (r, Ind TTCore.Star)))
 > getError (IMessage s) = Message s
-> getError (IUnbound clause clty rhs rhsty names) 
+> getError (IUnbound clause clty rhs rhsty names)
 >              = Unbound (view (Term (clause, Ind TTCore.Star)))
 >                        (view (Term (clty, Ind TTCore.Star)))
 >                        (view (Term (rhs, Ind TTCore.Star)))
@@ -54,8 +54,8 @@
 >     show (CantUnify t1 t2) = "Can't unify " ++ show t1 ++ " and " ++ show t2
 >     show (NotConvertible t1 t2) = show t1 ++ " and " ++ show t2 ++ " are not convertible"
 >     show (Message s) = s
->     show (Unbound clause clty rhs rhsty ns) 
->        = show ns ++ " unbound in clause " ++ show clause ++ " : " ++ show clty ++ 
+>     show (Unbound clause clty rhs rhsty ns)
+>        = show ns ++ " unbound in clause " ++ show clause ++ " : " ++ show clty ++
 >                     " = " ++ show rhs
 >     show (CantInfer  n tm) = "Can't infer value for " ++ show n ++ " in " ++ show tm
 >     show (NoSuchVar n) = "No such name as " ++ show n
@@ -105,4 +105,3 @@
 >     addDataNoElim :: Context -> a -> TTM Context
 >     addDataNoElim ctxt x = addData' False ctxt x
 >     addData' :: Bool -> Context -> a -> TTM Context
-

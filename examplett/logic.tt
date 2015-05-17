@@ -50,5 +50,3 @@ intros;
 left;
 trivial;
 Qed;
-
-

@@ -19,7 +19,7 @@ arbitrary free variable:
 
 \DM{
 \begin{array}{rll}
-\vL ::= & \vx 
+\vL ::= & \vx
 \mid \vL \land \vL
 \mid \vL \lor \vL
 \mid \vL \to \vL
@@ -105,7 +105,7 @@ consists of a parser and pretty printer for the language $\vL$, and a
 top level loop for applying introduction and elimination
 tactics. However, some domain
 specific tactics are needed, in particular to deal with negation and
-proof by contradiction. 
+proof by contradiction.
 
 To prove a negation $\neg\vA$, we assume $\vA$ and attempt to prove
 $\False$. This is achieved with an \hdecl{assumeFalse} tactic which
@@ -116,7 +116,7 @@ $\vA\:\to\:\False$, then $\vA$ can be introduced.
 
 \begin{verbatim}
 assumeFalse :: Tactic
-assumeFalse = unfold (name "not") >+> intro 
+assumeFalse = unfold (name "not") >+> intro
 \end{verbatim}
 
 The proof by contradiction tactic
@@ -183,11 +183,11 @@ properties of addition. In the \Funl{} syntax, we declare the
 properties we wish to show as follows:
 
 \begin{verbatim}
-myplusn0 proves 
+myplusn0 proves
      forall x:Int. myplus x 0 = x;
-myplusnm1 proves 
+myplusnm1 proves
      forall x:Int. forall y:Int. myplus x (1+y) = 1+(myplus x y);
-myplus_commutes proves 
+myplus_commutes proves
      forall x:Int. forall y:Int. myplus x y = myplus y x;
 \end{verbatim}
 
@@ -213,7 +213,7 @@ data Raw = Var String | Lam String Ty Raw | App Raw Raw
          | If Raw Raw Raw | Rec Raw [Raw]
 \end{verbatim}
 
-Building a \Funl{} function consists of creating a \hdecl{theorem} 
+Building a \Funl{} function consists of creating a \hdecl{theorem}
 with a goal representing the function's type, then using the
 \hdecl{buildTerm} tactic to traverse the
 structure of the raw term, constructing a proof of the
@@ -227,11 +227,11 @@ buildTerm (Var x) = refine x
 buildTerm (Lam x ty sc) = introName (name x) >+> buildTerm sc
 buildTerm (Language.App f a) = buildTerm f >+> buildTerm a
 buildTerm (Num x) = fill (mkNat x)
-buildTerm (If a t e) = 
+buildTerm (If a t e) =
     cases (mkTerm a) >+> buildTerm t >+> buildTerm e
 buildTerm (Rec t alts) =
     induction (mkTerm t) >+> tacs (map buildTerm alts)
-buildTerm (InfixOp Plus x y) = 
+buildTerm (InfixOp Plus x y) =
     refine "plus" >+> buildTerm x >+> buildTerm y
 buildTerm (InfixOp Times x y) = ...
 \end{verbatim}
@@ -248,7 +248,7 @@ mkTerm (Var x) = (Name Unknown (name x))
 mkTerm (Lam x ty sc) = Lambda (name x) (mkType ty) (mkTerm sc)
 mkTerm (Apply f a) = App (mkTerm f) (mkTerm a)
 mkTerm (Num x) = mkNat x
-mkTerm (InfixOp Plus x y) = 
+mkTerm (InfixOp Plus x y) =
     App (App (Name Free (name "plus")) (mkTerm x)) (mkTerm y)
 mkTerm (InfixOp Times x y) = ...
 \end{verbatim}
@@ -258,7 +258,7 @@ the typechecking and any issues with renaming, using techniques from
 \cite{not-a-number}; if there are any type errors in the \hdecl{Raw}
 term, this tactic will fail (although some extra work is required to
 produce readable error messages). By using \Ivor{} to handle
-typechecking and evaluation, we are in no danger of constructing or 
+typechecking and evaluation, we are in no danger of constructing or
 evaluating an ill-typed term.
 
 
