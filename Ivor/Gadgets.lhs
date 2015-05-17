@@ -2,6 +2,11 @@
 
 > module Ivor.Gadgets where
 
+> import qualified Control.Exception as Exception
+
+> catchIO :: IO a -> (Exception.IOException -> IO a) -> IO a
+> catchIO = Exception.catch
+
 > class Forget a b | a->b where
 >     forget :: a -> b
 
@@ -78,9 +83,9 @@ in turn. If present, return the contents, otherwise fail
 > findFile fp fn = ff' (".":fp) fn
 >   where ff' [] fn = fail "File not found in search path"
 >         ff' (d:ds) fn = do
->                         catch (do content <- readFile $ d ++ "/" ++ fn
->                                   return content)
->                               (\e -> ff' ds fn)
+>                         catchIO (do content <- readFile $ d ++ "/" ++ fn
+>                                     return content)
+>                                 (\e -> ff' ds fn)
 
 > unJust :: Maybe a -> a
 > unJust (Just a) = a

@@ -1,4 +1,5 @@
 > {-# OPTIONS_GHC -fglasgow-exts -XIncoherentInstances #-}
+> {-# LANGUAGE DeriveDataTypeable #-}
 
 > module Ivor.TTCore where
 
@@ -194,10 +195,7 @@ This keeps both namespaces separate.
 >     = UN String
 >     | MN (String,Int)
 >     | PN Name -- original name, pattern index
->   deriving (Ord, Eq)
-
-> instance Typeable Name where
->     typeOf n = mkTyConApp (mkTyCon "Name") []
+>   deriving (Ord, Eq, Typeable)
 
 Data declarations and pattern matching
 

@@ -31,7 +31,7 @@
 
 > import System.Exit
 > import System.Environment
-> import System.Directory
+> import System.Directory hiding (findFile)
 > import System.IO
 > import System.IO.Unsafe
 > import Data.Char
@@ -340,15 +340,15 @@ function which doesn't need to be in the IO Monad.
 > loop st = do putStr (prompt st)
 >              hFlush stdout
 >              inp <- readToSemi
->              st' <- catch (process (parseInput (extensions st)
->                                     (gettacs (usertactics st))
->                                     (map fst (usercommands st)) inp) st)
->                      (\e -> do return $ respondLn st (show e))
+>              st' <- catchIO (process (parseInput (extensions st)
+>                                       (gettacs (usertactics st))
+>                                       (map fst (usercommands st)) inp) st)
+>                             (\e -> do return $ respondLn st (show e))
 >              putStr $ (response st')
 >              if (finished st')
 >                 then return (clearResponse st')
->                 else catch (loop (clearResponse st'))
->                          (\e -> return st')
+>                 else catchIO (loop (clearResponse st'))
+>                              (\e -> return st')
 
 > -- | Set up the equality type, for use by the 'replace' tactic
 > configureEq :: String
@@ -422,9 +422,9 @@ If the given file is already loaded, do nothing.
 >     = shell { modulePath = (prefix++"/lib/ivor"):(modulePath shell) }
 
 > environment :: String -> IO (Maybe String)
-> environment x = catch (do e <- getEnv x
->                           return (Just e))
->                       (\_ -> return Nothing)
+> environment x = catchIO (do e <- getEnv x
+>                             return (Just e))
+>                         (\_ -> return Nothing)
 
 > tempfile :: IO (FilePath, Handle)
 > tempfile = do env <- environment "TMPDIR"

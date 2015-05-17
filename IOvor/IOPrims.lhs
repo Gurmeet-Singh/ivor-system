@@ -1,3 +1,5 @@
+> {-# LANGUAGE DeriveDataTypeable #-}
+
 > module IOPrims where
 
 > import System.IO
@@ -14,15 +16,12 @@ RealWorld is a dummy type representing the world state, Handle (from
 System.IO) gives file handles.
 
 > data RealWorld = RW ()
->    deriving Eq
+>    deriving (Eq, Typeable)
 
 > instance Show RealWorld where
 >     show _ = "<<World>>"
 
 > rwName = name "RealWorld"
-
-> instance Typeable RealWorld where
->     typeOf (RW ()) = mkTyConApp (mkTyCon "RW") []
 
 > instance ViewConst RealWorld where
 >     typeof x = rwName
